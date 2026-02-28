@@ -1,33 +1,13 @@
-import { useMemo, useState } from "react";
-import { Trophy, BarChart3, Table as TableIcon, Download, Share2, RefreshCw, Search } from "lucide-react";
+import { useMemo } from "react";
+import { Trophy, ArrowRight } from "lucide-react";
 import { getMatchesByTournament } from "@/lib/mockMatches";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-} from "recharts";
+import { type DisciplinaConfig } from "@/lib/disciplinaConfig";
 
 interface PosicionesTabProps {
   tournamentSlug: string;
+  disciplina: string;
+  /** Config de la disciplina. Viene de disciplinaConfig.ts vía DisciplinasTab */
+  config: DisciplinaConfig;
 }
 
 interface StandingsTeam {
@@ -43,263 +23,225 @@ interface StandingsTeam {
   racha: string[];
 }
 
-export function PosicionesTab({ tournamentSlug }: PosicionesTabProps) {
+function getFacultadEmoji(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("agro") || n.includes("agronomía")) return "🌾";
+  if (n.includes("zoo") || n.includes("zootecnia"))  return "🐄";
+  if (n.includes("ing") || n.includes("informática") || n.includes("sistemas")) return "⚙️";
+  if (n.includes("med") || n.includes("medicina"))  return "🩺";
+  if (n.includes("enf") || n.includes("enfermería")) return "💊";
+  if (n.includes("der") || n.includes("derecho"))   return "⚖️";
+  if (n.includes("econ") || n.includes("economía")) return "💰";
+  if (n.includes("for") || n.includes("forestal"))  return "🌲";
+  if (n.includes("edu") || n.includes("educación")) return "📚";
+  if (n.includes("soc") || n.includes("social"))    return "🤝";
+  return "🏫";
+}
+
+// ─── Banner de clasificación ──────────────────────────────────────────────────
+
+function ClasificacionBanner({ config }: { config: DisciplinaConfig }) {
+  // Solo mostrar si la disciplina tiene una fase siguiente
+  if (config.sistemaCompetencia === "grupos") return null;
+  if (config.equiposClasifican <= 0) return null;
+
+  const yaEnEliminacion = config.faseActual === "eliminacion" || config.faseActual === "finalizado";
+
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm mb-4 ${
+      yaEnEliminacion
+        ? "bg-gray-50 border border-gray-200 text-gray-500"
+        : "bg-green-50 border border-green-200"
+    }`}>
+      <div className="flex items-center gap-2">
+        <span className="text-base">{yaEnEliminacion ? "✅" : "🎯"}</span>
+        <span className={yaEnEliminacion ? "text-gray-600" : "text-green-800"}>
+          {yaEnEliminacion ? (
+            <>Los <strong>Top {config.equiposClasifican}</strong> de cada grupo ya clasificaron al bracket.</>
+          ) : (
+            <>
+              <strong>Top {config.equiposClasifican}</strong> de cada grupo
+              {config.numGrupos > 1 && ` (${config.numGrupos} grupos)`} avanzan a{" "}
+              <strong>eliminación directa</strong>.
+            </>
+          )}
+        </span>
+      </div>
+      {!yaEnEliminacion && (
+        <span className="ml-auto flex items-center gap-1 text-xs text-green-700 font-semibold whitespace-nowrap">
+          Bracket de {config.equiposEnBracket}
+          <ArrowRight className="w-3 h-3" />
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+
+export function PosicionesTab({ tournamentSlug, disciplina, config }: PosicionesTabProps) {
   const allMatches = getMatchesByTournament(tournamentSlug);
-  const [selectedSport, setSelectedSport] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"table" | "charts">("table");
-  const [searchTerm, setSearchTerm] = useState("");
 
-  const sports = useMemo(() => {
-    const sportSet = new Set(allMatches.map((m) => m.sport));
-    return Array.from(sportSet).sort();
-  }, [allMatches]);
+  const standings = useMemo<StandingsTeam[]>(() => {
+    const teams: StandingsTeam[] = [];
 
-  useMemo(() => {
-    if (sports.length > 0 && !selectedSport) {
-      setSelectedSport(sports[0]);
-    }
-  }, [sports, selectedSport]);
-
-  const standingsBySport = useMemo(() => {
-    const standings: Record<string, StandingsTeam[]> = {};
-
-    sports.forEach((sport) => {
-      standings[sport] = [];
-    });
+    const getOrCreate = (name: string): StandingsTeam => {
+      let t = teams.find((x) => x.name === name);
+      if (!t) {
+        t = { name, played: 0, wins: 0, draws: 0, losses: 0, gf: 0, gc: 0, gd: 0, points: 0, racha: [] };
+        teams.push(t);
+      }
+      return t;
+    };
 
     allMatches
-      .filter((m) => m.status === "finished")
-      .forEach((match) => {
-        const sport = match.sport;
-        const teamsInSport = standings[sport] || [];
-        
-        const getOrCreateTeam = (name: string) => {
-          let team = teamsInSport.find((t) => t.name === name);
-          if (!team) {
-            team = {
-              name,
-              played: 0,
-              wins: 0,
-              draws: 0,
-              losses: 0,
-              gf: 0,
-              gc: 0,
-              gd: 0,
-              points: 0,
-              racha: [],
-            };
-            teamsInSport.push(team);
-          }
-          return team;
-        };
+      .filter((m) => m.status === "finished" && m.sport === disciplina)
+      .forEach((m) => {
+        const home = getOrCreate(m.home);
+        const away = getOrCreate(m.away);
 
-        const homeTeam = getOrCreateTeam(match.home);
-        const awayTeam = getOrCreateTeam(match.away);
+        home.played++; away.played++;
+        home.gf += m.homeScore ?? 0; home.gc += m.awayScore ?? 0;
+        away.gf += m.awayScore ?? 0; away.gc += m.homeScore ?? 0;
 
-        homeTeam.played++;
-        awayTeam.played++;
-        homeTeam.gf += match.homeScore || 0;
-        homeTeam.gc += match.awayScore || 0;
-        awayTeam.gf += match.awayScore || 0;
-        awayTeam.gc += match.homeScore || 0;
-
-        if (match.homeScore > match.awayScore) {
-          homeTeam.wins++;
-          homeTeam.points += 3;
-          homeTeam.racha.push("W");
-          awayTeam.losses++;
-          awayTeam.racha.push("L");
-        } else if (match.homeScore < match.awayScore) {
-          awayTeam.wins++;
-          awayTeam.points += 3;
-          awayTeam.racha.push("W");
-          homeTeam.losses++;
-          homeTeam.racha.push("L");
+        if ((m.homeScore ?? 0) > (m.awayScore ?? 0)) {
+          home.wins++; home.points += 3; home.racha.push("W");
+          away.losses++; away.racha.push("L");
+        } else if ((m.homeScore ?? 0) < (m.awayScore ?? 0)) {
+          away.wins++; away.points += 3; away.racha.push("W");
+          home.losses++; home.racha.push("L");
         } else {
-          homeTeam.draws++;
-          homeTeam.points += 1;
-          homeTeam.racha.push("D");
-          awayTeam.draws++;
-          awayTeam.points += 1;
-          awayTeam.racha.push("D");
+          home.draws++; home.points += 1; home.racha.push("D");
+          away.draws++; away.points += 1; away.racha.push("D");
         }
 
-        homeTeam.gd = homeTeam.gf - homeTeam.gc;
-        awayTeam.gd = awayTeam.gf - awayTeam.gc;
+        home.gd = home.gf - home.gc;
+        away.gd = away.gf - away.gc;
       });
 
-    Object.keys(standings).forEach((sport) => {
-      standings[sport] = standings[sport].sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.gd !== a.gd) return b.gd - a.gd;
-        return b.gf - a.gf;
-      });
+    return teams.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.gd !== a.gd) return b.gd - a.gd;
+      return b.gf - a.gf;
     });
+  }, [allMatches, disciplina]);
 
-    return standings;
-  }, [allMatches, sports]);
+  // Cuántos equipos por grupo clasifican (para resaltar las filas correctas)
+  // Si numGrupos > 0 asumimos que todos los equipos en standings son de UN grupo (demo).
+  // En producción, la tabla estaría segmentada por grupo.
+  const numClasifican = config.equiposClasifican ?? 0;
 
-  const currentStandings = useMemo(() => {
-    let data = (selectedSport && standingsBySport[selectedSport]) || [];
-    if (searchTerm) {
-      data = data.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-    return data;
-  }, [selectedSport, standingsBySport, searchTerm]);
-
-  // Chart Data preparation
-  const chartData = useMemo(() => {
-    return currentStandings.map(t => ({
-      name: t.name,
-      puntos: t.points,
-      gf: t.gf,
-      gc: t.gc,
-      victorias: t.wins,
-      empates: t.draws,
-      derrotas: t.losses,
-    }));
-  }, [currentStandings]);
-
-  const COLORS = ["#00873E", "#D4AF37", "#005a2a", "#87a38d", "#e0e0e0"];
-
-  if (sports.length === 0) {
+  if (standings.length === 0) {
     return (
-      <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
-        <Trophy className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
-        <p className="text-xl font-medium text-muted-foreground">No hay resultados registrados aún</p>
-      </div>
+      <>
+        <ClasificacionBanner config={config} />
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+          <Trophy className="w-14 h-14 text-muted-foreground opacity-20" />
+          <div>
+            <p className="text-lg font-bold text-muted-foreground">Sin resultados aún</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Los partidos finalizados de <strong>{disciplina}</strong> aparecerán aquí.
+            </p>
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header & Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="flex bg-muted p-1 rounded-lg">
-            <Button
-              variant={viewMode === "table" ? "white" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("table")}
-              className={viewMode === "table" ? "shadow-sm bg-white" : ""}
-            >
-              <TableIcon className="w-4 h-4 mr-2" />
-              Tabla
-            </Button>
-            <Button
-              variant={viewMode === "charts" ? "white" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("charts")}
-              className={viewMode === "charts" ? "shadow-sm bg-white" : ""}
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Gráficos
-            </Button>
-          </div>
-          <div className="h-8 w-px bg-border mx-2 hidden sm:block" />
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar facultad..."
-              className="pl-9 h-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Download className="w-4 h-4" />
-            Exportar
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Share2 className="w-4 h-4" />
-            Compartir
-          </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+      <ClasificacionBanner config={config} />
 
-      {/* Sport Selector Tabs */}
-      <div className="overflow-x-auto pb-2">
-        <div className="flex gap-2">
-          {sports.map((sport) => (
-            <Button
-              key={sport}
-              variant={selectedSport === sport ? "default" : "secondary"}
-              onClick={() => setSelectedSport(sport)}
-              className="whitespace-nowrap h-10 px-6 font-bold"
-            >
-              {sport}
-            </Button>
-          ))}
-        </div>
-      </div>
+      {/* Tabla principal */}
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-primary/5 border-b border-border">
+              <tr>
+                <th className="px-4 py-4 text-center font-bold text-foreground w-12">#</th>
+                <th className="px-4 py-4 text-left font-bold text-foreground">Facultad</th>
+                <th className="px-4 py-4 text-center font-bold text-foreground" title="Partidos Jugados">PJ</th>
+                <th className="px-4 py-4 text-center font-bold text-green-700" title="Ganados">G</th>
+                <th className="px-4 py-4 text-center font-bold text-yellow-600" title="Empates">E</th>
+                <th className="px-4 py-4 text-center font-bold text-red-600" title="Perdidos">P</th>
+                <th className="px-4 py-4 text-center font-bold text-foreground" title="Goles a favor">GF</th>
+                <th className="px-4 py-4 text-center font-bold text-foreground" title="Goles en contra">GC</th>
+                <th className="px-4 py-4 text-center font-bold text-foreground" title="Diferencia de goles">DG</th>
+                <th className="px-4 py-4 text-center font-bold text-primary" title="Puntos">Pts</th>
+                <th className="px-4 py-4 text-center font-bold text-foreground hidden md:table-cell">Racha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {standings.map((team, idx) => {
+                // Zona visual según posición y reglas de clasificación
+                const clasifica  = numClasifican > 0 && idx < numClasifican;
+                const repechaje  = numClasifican > 0 && idx === numClasifican;
+                const eliminado  = numClasifican > 0 && idx > numClasifican;
 
-      {viewMode === "table" ? (
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-primary/5 border-b border-border">
-                <tr>
-                  <th className="px-4 py-4 text-center font-bold text-foreground w-12">#</th>
-                  <th className="px-4 py-4 text-left font-bold text-foreground">Facultad</th>
-                  <th className="px-4 py-4 text-center font-bold text-foreground">PJ</th>
-                  <th className="px-4 py-4 text-center font-bold text-foreground">G</th>
-                  <th className="px-4 py-4 text-center font-bold text-foreground">E</th>
-                  <th className="px-4 py-4 text-center font-bold text-foreground">P</th>
-                  <th className="px-4 py-4 text-center font-bold text-foreground">GF</th>
-                  <th className="px-4 py-4 text-center font-bold text-foreground">GC</th>
-                  <th className="px-4 py-4 text-center font-bold text-foreground">DG</th>
-                  <th className="px-4 py-4 text-center font-bold text-foreground">Pts</th>
-                  <th className="px-4 py-4 text-center font-bold text-foreground">Racha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentStandings.map((team, idx) => (
+                return (
                   <tr
                     key={team.name}
                     className={`border-b border-border hover:bg-primary/5 transition-colors ${
-                      idx < 2 ? "bg-primary/5" : ""
+                      clasifica ? "bg-green-50/50" : repechaje ? "bg-yellow-50/30" : ""
                     }`}
                   >
-                    <td className="px-4 py-4 text-center font-bold">
-                      <div className={`inline-flex items-center justify-center w-7 h-7 rounded-md text-xs ${
-                        idx === 0 ? "bg-yellow-500 text-white" : 
-                        idx === 1 ? "bg-slate-400 text-white" : 
-                        idx === 2 ? "bg-amber-600 text-white" : "bg-muted text-muted-foreground"
+                    {/* Posición */}
+                    <td className="px-4 py-4 text-center">
+                      <div className={`inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold ${
+                        idx === 0 ? "bg-yellow-400 text-yellow-900" :
+                        idx === 1 ? "bg-slate-400 text-white" :
+                        idx === 2 ? "bg-amber-600 text-white" :
+                        "bg-muted text-muted-foreground"
                       }`}>
                         {idx + 1}
                       </div>
                     </td>
-                    <td className="px-4 py-4 font-bold flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-lg">
-                        {team.name === "Agronomía" ? "🌾" : 
-                         team.name === "Ingeniería" ? "⚙️" : 
-                         team.name === "Zootecnia" ? "🐄" : "🏫"}
+
+                    {/* Facultad + badges */}
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3 font-bold">
+                        <span className="text-xl leading-none">{getFacultadEmoji(team.name)}</span>
+                        <span>{team.name}</span>
+                        {clasifica && config.faseActual === "grupos" && (
+                          <span className="hidden sm:inline text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200 whitespace-nowrap">
+                            Clasifica
+                          </span>
+                        )}
+                        {clasifica && config.faseActual === "eliminacion" && (
+                          <span className="hidden sm:inline text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200 whitespace-nowrap">
+                            En bracket
+                          </span>
+                        )}
+                        {repechaje && (
+                          <span className="hidden sm:inline text-[10px] font-bold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 whitespace-nowrap">
+                            Repechaje
+                          </span>
+                        )}
                       </div>
-                      {team.name}
                     </td>
-                    <td className="px-4 py-4 text-center">{team.played}</td>
+
+                    <td className="px-4 py-4 text-center text-foreground">{team.played}</td>
                     <td className="px-4 py-4 text-center text-green-600 font-semibold">{team.wins}</td>
                     <td className="px-4 py-4 text-center text-yellow-600 font-semibold">{team.draws}</td>
                     <td className="px-4 py-4 text-center text-red-600 font-semibold">{team.losses}</td>
                     <td className="px-4 py-4 text-center">{team.gf}</td>
                     <td className="px-4 py-4 text-center">{team.gc}</td>
-                    <td className={`px-4 py-4 text-center font-bold ${team.gd > 0 ? "text-green-600" : team.gd < 0 ? "text-red-600" : ""}`}>
+                    <td className={`px-4 py-4 text-center font-bold ${
+                      team.gd > 0 ? "text-green-600" : team.gd < 0 ? "text-red-600" : "text-muted-foreground"
+                    }`}>
                       {team.gd > 0 ? `+${team.gd}` : team.gd}
                     </td>
                     <td className="px-4 py-4 text-center font-black text-primary text-base">{team.points}</td>
-                    <td className="px-4 py-4 text-center">
+
+                    {/* Racha últimos 5 */}
+                    <td className="px-4 py-4 text-center hidden md:table-cell">
                       <div className="flex justify-center gap-1">
                         {team.racha.slice(-5).map((r, i) => (
                           <span
                             key={i}
                             className={`w-5 h-5 rounded text-[10px] flex items-center justify-center font-bold text-white ${
-                              r === "W" ? "bg-green-500" : r === "L" ? "bg-red-500" : "bg-yellow-500"
+                              r === "W" ? "bg-green-500" : r === "L" ? "bg-red-500" : "bg-yellow-400"
                             }`}
                           >
                             {r}
@@ -308,123 +250,31 @@ export function PosicionesTab({ tournamentSlug }: PosicionesTabProps) {
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="bg-muted/30 p-4 border-t text-xs text-muted-foreground flex gap-4">
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Leyenda dinámica según el sistema */}
+        <div className="bg-muted/30 px-4 py-3 border-t flex flex-wrap gap-4 text-xs text-muted-foreground">
+          {numClasifican > 0 && (
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 bg-yellow-500 rounded-sm" /> Clasificación Directa
+              <span className="w-3 h-3 rounded-sm bg-green-400" />
+              {config.faseActual === "eliminacion" ? "Ya clasificó" : `Clasifica (Top ${numClasifican})`}
             </div>
+          )}
+          {numClasifican > 0 && (
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 bg-slate-400 rounded-sm" /> Zona de Repechaje
+              <span className="w-3 h-3 rounded-sm bg-yellow-400" />
+              Zona de repechaje
             </div>
+          )}
+          <div className="flex items-center gap-1.5 ml-auto font-medium">
+            G = Ganados · E = Empates · P = Perdidos · GF/GC = Goles · DG = Diferencia
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Gráfico de Barras - Ranking de Puntos */}
-          <CardChart title="Ranking General (Puntos)">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
-                <Tooltip 
-                  cursor={{ fill: 'rgba(0, 135, 62, 0.1)' }}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="puntos" fill="#00873E" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardChart>
-
-          {/* Gráfico Circular - Victorias/Empates/Derrotas */}
-          <CardChart title="Distribución de Resultados">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Victorias', value: chartData.reduce((acc, curr) => acc + curr.victorias, 0) },
-                    { name: 'Empates', value: chartData.reduce((acc, curr) => acc + curr.empates, 0) },
-                    { name: 'Derrotas', value: chartData.reduce((acc, curr) => acc + curr.derrotas, 0) },
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardChart>
-
-          {/* Gráfico Comparativo - GF vs GC */}
-          <CardChart title="Goles a Favor vs En Contra">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="gf" name="A Favor" fill="#00873E" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="gc" name="En Contra" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardChart>
-
-          {/* Gráfico de Radar - Estadísticas */}
-          <CardChart title="Rendimiento por Facultad">
-            <ResponsiveContainer width="100%" height={300}>
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData.slice(0, 5)}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <PolarRadiusAxis />
-                <Radar
-                  name="Puntos"
-                  dataKey="puntos"
-                  stroke="#00873E"
-                  fill="#00873E"
-                  fillOpacity={0.6}
-                />
-                <Tooltip />
-              </RadarChart>
-            </ResponsiveContainer>
-          </CardChart>
-        </div>
-      )}
-      
-      <div className="flex items-center justify-between text-xs text-muted-foreground mt-8 p-4 bg-muted/20 rounded-lg">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          Actualizado en tiempo real (WebSockets activos)
-        </div>
-        <div>
-          Última actualización: {new Date().toLocaleTimeString()}
         </div>
       </div>
-    </div>
-  );
-}
-
-function CardChart({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white p-6 rounded-xl border shadow-sm">
-      <h3 className="font-bold text-foreground mb-6 flex items-center justify-between">
-        {title}
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Download className="w-3 h-3" />
-        </Button>
-      </h3>
-      {children}
     </div>
   );
 }

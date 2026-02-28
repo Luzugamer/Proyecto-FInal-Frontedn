@@ -1,378 +1,422 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Clock, Play, Trophy, Search, X, Zap, RotateCcw } from "lucide-react";
+import { Clock, Play, Trophy, Search, X, Zap, RotateCcw, Filter } from "lucide-react";
 import { getMatchesByTournament } from "@/lib/mockMatches";
+import { cn } from "@/lib/utils";
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
+type StatusTab = "live" | "today" | "upcoming" | "finished";
 
 interface MatchesTabProps {
-  tournamentId: string;
   tournamentSlug: string;
+  /**
+   * Cuando se pasa (dentro de DisciplinasTab):
+   *   - filtra automáticamente por esa disciplina
+   *   - oculta el selector de deporte
+   * Cuando no se pasa (tab "Partidos" nivel 1):
+   *   - muestra todos los deportes
+   *   - el selector de deporte es visible
+   */
+  disciplina?: string;
   userRole?: string;
 }
 
-export function MatchesTab({
-  tournamentId,
-  tournamentSlug,
-  userRole,
-}: MatchesTabProps) {
-  const [activeTab, setActiveTab] = useState<
-    "en-vivo" | "hoy" | "proximos" | "pasados"
-  >("en-vivo");
-  const [selectedSport, setSelectedSport] = useState<string>("");
-  const [searchTeam, setSearchTeam] = useState<string>("");
-  const [showFilters, setShowFilters] = useState(false);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  const matches = getMatchesByTournament(tournamentSlug);
+const STATUS_TABS: { id: StatusTab; label: string; emoji: string }[] = [
+  { id: "live",     label: "En Vivo",  emoji: "🔴" },
+  { id: "today",    label: "Hoy",      emoji: "📅" },
+  { id: "upcoming", label: "Próximos", emoji: "⏳" },
+  { id: "finished", label: "Pasados",  emoji: "✅" },
+];
 
-  // Extract unique sports
-  const sports = Array.from(new Set(matches.map((m) => m.sport)));
-
-  const filteredMatches = useMemo(() => {
-    return matches
-      .filter((match) => {
-        const statusMatch =
-          (activeTab === "en-vivo" && match.status === "live") ||
-          (activeTab === "hoy" && match.status === "today") ||
-          (activeTab === "proximos" && match.status === "upcoming") ||
-          (activeTab === "pasados" && match.status === "finished");
-
-        const sportMatch = !selectedSport || match.sport === selectedSport;
-        const teamMatch =
-          !searchTeam ||
-          match.home.toLowerCase().includes(searchTeam.toLowerCase()) ||
-          match.away.toLowerCase().includes(searchTeam.toLowerCase());
-
-        return statusMatch && sportMatch && teamMatch;
-      })
-      .sort(
-        (a, b) =>
-          new Date(b.date + " " + b.time).getTime() -
-          new Date(a.date + " " + a.time).getTime(),
+function getStatusBadge(status: string) {
+  switch (status) {
+    case "live":
+      return (
+        <span className="inline-flex items-center gap-1.5 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+          <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+          EN VIVO
+        </span>
       );
-  }, [activeTab, selectedSport, searchTeam, matches]);
+    case "today":
+      return (
+        <span className="inline-flex items-center gap-1.5 bg-primary text-white px-3 py-1 rounded-full text-xs font-bold">
+          <Clock className="w-3 h-3" />
+          HOY
+        </span>
+      );
+    case "upcoming":
+      return (
+        <span className="inline-flex items-center gap-1 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+          PRÓXIMO
+        </span>
+      );
+    case "finished":
+      return (
+        <span className="inline-flex items-center gap-1 bg-gray-400 text-white px-3 py-1 rounded-full text-xs font-bold">
+          FINALIZADO
+        </span>
+      );
+  }
+}
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "live":
-        return (
-          <span className="inline-flex items-center gap-1 bg-destructive text-white px-3 py-1 rounded-full text-xs font-bold">
-            <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse"></span>
-            EN VIVO
-          </span>
-        );
-      case "today":
-        return (
-          <span className="inline-flex items-center gap-1 bg-primary text-white px-3 py-1 rounded-full text-xs font-bold">
-            <Clock className="w-3 h-3" />
-            HOY
-          </span>
-        );
-      case "upcoming":
-        return (
-          <span className="inline-flex items-center gap-1 bg-secondary text-white px-3 py-1 rounded-full text-xs font-bold">
-            PRÓXIMO
-          </span>
-        );
-      case "finished":
-        return (
-          <span className="inline-flex items-center gap-1 bg-muted-foreground text-white px-3 py-1 rounded-full text-xs font-bold">
-            FINALIZADO
-          </span>
-        );
-    }
-  };
+// Conteo de partidos por estado para los badges de las pestañas
+function useStatusCounts(matches: ReturnType<typeof getMatchesByTournament>) {
+  return useMemo(() => {
+    const counts: Record<StatusTab, number> = { live: 0, today: 0, upcoming: 0, finished: 0 };
+    matches.forEach((m) => {
+      if (m.status in counts) counts[m.status as StatusTab]++;
+    });
+    return counts;
+  }, [matches]);
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+
+export function MatchesTab({ tournamentSlug, disciplina, userRole }: MatchesTabProps) {
+  const insideDisciplina = !!disciplina;
+
+  const [activeStatus, setActiveStatus] = useState<StatusTab>("live");
+  const [selectedSport, setSelectedSport] = useState<string>("");
+  const [searchTeam, setSearchTeam]     = useState<string>("");
+  const [showFilters, setShowFilters]   = useState(false);
+
+  const allMatches = getMatchesByTournament(tournamentSlug);
+
+  // Si estamos dentro de DisciplinasTab, pre-filtramos por disciplina
+  const baseMatches = useMemo(
+    () => insideDisciplina
+      ? allMatches.filter((m) => m.sport === disciplina)
+      : allMatches,
+    [allMatches, disciplina, insideDisciplina]
+  );
+
+  // Deportes disponibles (solo para el nivel 1)
+  const sports = useMemo(
+    () => Array.from(new Set(allMatches.map((m) => m.sport))).sort(),
+    [allMatches]
+  );
+
+  const statusCounts = useStatusCounts(baseMatches);
+
+  // Filtros aplicados
+  const filteredMatches = useMemo(() => {
+    return baseMatches
+      .filter((m) => {
+        const byStatus = m.status === activeStatus;
+        const bySport  = insideDisciplina || !selectedSport || m.sport === selectedSport;
+        const byTeam   = !searchTeam ||
+          m.home.toLowerCase().includes(searchTeam.toLowerCase()) ||
+          m.away.toLowerCase().includes(searchTeam.toLowerCase());
+        return byStatus && bySport && byTeam;
+      })
+      .sort((a, b) =>
+        activeStatus === "finished"
+          ? new Date(b.date + "T" + b.time).getTime() - new Date(a.date + "T" + a.time).getTime()
+          : new Date(a.date + "T" + a.time).getTime() - new Date(b.date + "T" + b.time).getTime()
+      );
+  }, [baseMatches, activeStatus, selectedSport, searchTeam, insideDisciplina]);
+
+  const hasActiveFilters = (!insideDisciplina && !!selectedSport) || !!searchTeam;
+
+  // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 border-b border-border">
-        {["en-vivo", "hoy", "proximos", "pasados"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() =>
-              setActiveTab(tab as "en-vivo" | "hoy" | "proximos" | "pasados")
-            }
-            className={`whitespace-nowrap px-6 py-3 font-bold transition-colors ${
-              activeTab === tab
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab === "en-vivo" && "En Vivo"}
-            {tab === "hoy" && "Hoy"}
-            {tab === "proximos" && "Próximos"}
-            {tab === "pasados" && "Pasados"}
-          </button>
-        ))}
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+
+      {/* ── Status tabs ─────────────────────────────────────────────────── */}
+      <div className="flex gap-1 border-b border-border overflow-x-auto">
+        {STATUS_TABS.map(({ id, label, emoji }) => {
+          const count   = statusCounts[id];
+          const isActive = id === activeStatus;
+          return (
+            <button
+              key={id}
+              onClick={() => setActiveStatus(id)}
+              className={cn(
+                "flex items-center gap-2 whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 transition-all -mb-px",
+                isActive
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <span>{emoji}</span>
+              <span>{label}</span>
+              {count > 0 && (
+                <span className={cn(
+                  "text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center",
+                  isActive
+                    ? id === "live" ? "bg-red-500 text-white" : "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                )}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Search Bar with Filter Toggle */}
-      <div className="flex gap-3 mb-6 flex-wrap">
-        <div className="relative group flex-1 min-w-[250px]">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary/70 group-focus-within:text-primary transition-colors" />
+      {/* ── Buscador + filtro deporte (solo nivel 1) ─────────────────────── */}
+      <div className="flex gap-3 flex-wrap">
+        {/* Búsqueda por equipo */}
+        <div className="relative group flex-1 min-w-[220px]">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
             type="text"
-            placeholder="🔍 Buscar equipo..."
+            placeholder="Buscar equipo..."
             value={searchTeam}
             onChange={(e) => setSearchTeam(e.target.value)}
-            className="w-full pl-12 pr-12 py-3.5 md:py-4 text-base md:text-lg border-2 border-primary/20 rounded-2xl focus:outline-none focus:border-primary focus:shadow-lg focus:shadow-primary/20 bg-white transition-all duration-300 hover:border-primary/40"
+            className="w-full pl-10 pr-10 py-2.5 border-2 border-border rounded-xl text-sm focus:outline-none focus:border-primary bg-white transition-all"
           />
           {searchTeam && (
             <button
               onClick={() => setSearchTeam("")}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 hover:bg-muted rounded-lg transition-colors"
-              aria-label="Limpiar búsqueda"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-lg"
             >
-              <X className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+              <X className="w-4 h-4 text-muted-foreground" />
             </button>
           )}
         </div>
 
-        {/* Filter Button */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={`px-4 py-3.5 md:py-4 border-2 rounded-2xl font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-            showFilters
-              ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/30"
-              : "bg-white border-primary/20 text-foreground hover:border-primary/40"
-          }`}
-        >
-          ⚽ Deporte
-        </button>
+        {/* Filtro de deporte — solo cuando NO hay disciplina fija */}
+        {!insideDisciplina && (
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl text-sm font-bold transition-all",
+              showFilters || selectedSport
+                ? "bg-primary border-primary text-primary-foreground"
+                : "bg-white border-border text-foreground hover:border-primary/40"
+            )}
+          >
+            <Filter className="w-4 h-4" />
+            Deporte
+            {selectedSport && <span className="text-[10px] bg-white/30 px-1.5 py-0.5 rounded-full">1</span>}
+          </button>
+        )}
+
+        {/* Limpiar */}
+        {hasActiveFilters && (
+          <button
+            onClick={() => { setSelectedSport(""); setSearchTeam(""); }}
+            className="flex items-center gap-1.5 px-4 py-2.5 border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground transition-all"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Limpiar
+          </button>
+        )}
       </div>
 
-      {/* Collapsible Filters */}
-      {showFilters && (
-        <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl border-2 border-primary/10 p-6 md:p-8 shadow-lg shadow-primary/5 backdrop-blur-sm animate-fade-in mb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            {/* Deporte Filter */}
-            <div className="group">
-              <label className="block text-sm font-bold text-foreground mb-2.5 flex items-center gap-2">
-                <span className="text-lg">⚽</span>
-                Deporte
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedSport}
-                  onChange={(e) => setSelectedSport(e.target.value)}
-                  className="w-full px-4 py-2.5 border-2 border-primary/20 rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white transition-all duration-300 hover:border-primary/40 cursor-pointer font-medium appearance-none text-sm"
-                >
-                  <option value="">Todos</option>
-                  {sports.map((sport) => (
-                    <option key={sport} value={sport}>
-                      {sport}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground group-hover:text-primary transition-colors">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Clear Filters Button */}
-          <div className="flex items-end gap-2">
+      {/* ── Panel de filtro de deporte ───────────────────────────────────── */}
+      {showFilters && !insideDisciplina && (
+        <div className="bg-muted/30 rounded-xl border border-border p-4 space-y-3">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Filtrar por deporte</p>
+          <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => {
-                setSelectedSport("");
-                setSearchTeam("");
-              }}
-              disabled={!selectedSport && !searchTeam}
-              className="px-4 py-2.5 border-2 border-dashed border-primary/30 hover:border-primary/60 rounded-xl font-bold text-primary hover:bg-primary/5 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-md text-sm"
+              onClick={() => setSelectedSport("")}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-sm font-semibold border-2 transition-all",
+                !selectedSport
+                  ? "bg-primary border-primary text-primary-foreground"
+                  : "bg-white border-border text-foreground hover:border-primary/40"
+              )}
             >
-              <RotateCcw className="w-4 h-4" />
-              <span>Limpiar</span>
+              Todos
             </button>
-          </div>
-
-          {/* Active Filters */}
-          <div className="flex flex-wrap gap-2 items-center mt-4 pt-4 border-t border-primary/10">
-            {(selectedSport || searchTeam) && (
-              <span className="text-xs font-bold text-muted-foreground">
-                Filtros activos:
-              </span>
-            )}
-            {selectedSport && (
-              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-full px-3 py-1 text-xs font-medium text-primary animate-scale-in">
-                {selectedSport}
-                <button
-                  onClick={() => setSelectedSport("")}
-                  className="ml-1 hover:text-primary/70 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+            {sports.map((sport) => (
+              <button
+                key={sport}
+                onClick={() => setSelectedSport(sport === selectedSport ? "" : sport)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-sm font-semibold border-2 transition-all",
+                  selectedSport === sport
+                    ? "bg-primary border-primary text-primary-foreground"
+                    : "bg-white border-border text-foreground hover:border-primary/40"
+                )}
+              >
+                {sport}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Matches Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {filteredMatches.length > 0 ? (
-          filteredMatches.map((match) => (
+      {/* ── Grid de partidos ─────────────────────────────────────────────── */}
+      {filteredMatches.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredMatches.map((match) => (
             <Link
               key={match.id}
               to={`/torneo/${tournamentSlug}/partidos/${match.id}`}
-              className="bg-white rounded-xl border border-border overflow-hidden hover:shadow-xl transition-all hover:scale-105 cursor-pointer group"
+              className="bg-white rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all hover:-translate-y-0.5 group"
             >
-              {/* Header */}
-              <div className="bg-gradient-to-r from-primary-50 to-primary-100 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              {/* Header de la tarjeta */}
+              <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-primary/5 to-transparent border-b border-border/60">
+                <div className="flex items-center gap-2">
                   {getStatusBadge(match.status)}
-                  <span className="text-xs font-bold text-muted-foreground bg-white px-2 py-1 rounded">
-                    {match.sport}
-                  </span>
+                  {/* Mostrar deporte solo cuando NO estamos dentro de una disciplina fija */}
+                  {!insideDisciplina && (
+                    <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      {match.sport}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="w-3 h-3" />
+                  {new Date(match.date + "T00:00:00").toLocaleDateString("es-PE", {
+                    day: "numeric", month: "short",
+                  })}
+                  {" · "}{match.time}
                 </div>
               </div>
 
-              {/* Score Section */}
-              <div className="p-6">
-                <div className="grid grid-cols-3 gap-3 items-center mb-4">
-                  {/* Home */}
+              {/* Marcador */}
+              <div className="px-5 py-5">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                  {/* Local */}
                   <div className="text-center">
-                    <p className="text-sm font-bold text-foreground mb-2 line-clamp-2">
+                    <p className="text-sm font-bold text-foreground leading-tight line-clamp-2">
                       {match.home}
                     </p>
-                    {match.homeScore !== undefined && (
-                      <p className="text-3xl font-bold text-primary">
-                        {match.homeScore}
-                      </p>
+                  </div>
+
+                  {/* Resultado o vs */}
+                  <div className="flex flex-col items-center gap-1 px-3">
+                    {match.homeScore !== undefined && match.awayScore !== undefined ? (
+                      <div className="flex items-center gap-1">
+                        <span className={cn(
+                          "text-3xl font-black tabular-nums",
+                          match.homeScore > match.awayScore ? "text-primary" : "text-muted-foreground"
+                        )}>
+                          {match.homeScore}
+                        </span>
+                        <span className="text-muted-foreground font-bold mx-1">–</span>
+                        <span className={cn(
+                          "text-3xl font-black tabular-nums",
+                          match.awayScore > match.homeScore ? "text-primary" : "text-muted-foreground"
+                        )}>
+                          {match.awayScore}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg font-black text-muted-foreground">VS</span>
+                        {(match.status === "today" || match.status === "live") && (
+                          <span className="text-xs font-bold text-primary">{match.time}</span>
+                        )}
+                      </div>
+                    )}
+                    {match.status === "live" && (
+                      <span className="text-[10px] font-bold text-red-500 animate-pulse">● EN VIVO</span>
                     )}
                   </div>
 
-                  {/* vs */}
-                  <div className="flex flex-col items-center gap-1">
-                    {match.homeScore !== undefined && (
-                      <p className="text-lg font-bold text-muted-foreground">
-                        -
-                      </p>
-                    )}
-                    {match.status === "today" && (
-                      <p className="text-xs font-bold text-primary">
-                        {match.time}
-                      </p>
-                    )}
-                    {match.status === "upcoming" && (
-                      <p className="text-xs font-bold text-secondary">
-                        {match.time}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Away */}
+                  {/* Visitante */}
                   <div className="text-center">
-                    <p className="text-sm font-bold text-foreground mb-2 line-clamp-2">
+                    <p className="text-sm font-bold text-foreground leading-tight line-clamp-2">
                       {match.away}
                     </p>
-                    {match.awayScore !== undefined && (
-                      <p className="text-3xl font-bold text-primary">
-                        {match.awayScore}
-                      </p>
+                  </div>
+                </div>
+
+                {/* Sede */}
+                <p className="text-center text-xs text-muted-foreground mt-3">
+                  📍 {match.court}
+                </p>
+              </div>
+
+              {/* Eventos (máx 2 goles/eventos) */}
+              {match.events && match.events.length > 0 && (
+                <div className="px-5 py-3 border-t border-border/60 bg-muted/20">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 flex items-center gap-1">
+                    <Zap className="w-3 h-3" /> Eventos
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {match.events.slice(0, 4).map((ev, i) => (
+                      <span
+                        key={i}
+                        className={cn(
+                          "text-[11px] font-semibold px-2 py-0.5 rounded-full",
+                          ev.type === "goal"   ? "bg-green-100 text-green-700" :
+                          ev.type === "yellow" ? "bg-yellow-100 text-yellow-700" :
+                          "bg-red-100 text-red-700"
+                        )}
+                      >
+                        {ev.type === "goal" ? "⚽" : ev.type === "yellow" ? "🟨" : "🟥"}
+                        {" "}{ev.player.split(" ")[0]} {ev.minute}
+                      </span>
+                    ))}
+                    {match.events.length > 4 && (
+                      <span className="text-[11px] text-muted-foreground self-center">
+                        +{match.events.length - 4} más
+                      </span>
                     )}
                   </div>
                 </div>
+              )}
 
-                {/* Events Summary */}
-                {match.events && match.events.length > 0 && (
-                  <div className="mb-4 pt-4 border-t border-primary/20">
-                    <p className="text-xs font-bold text-muted-foreground mb-2 flex items-center gap-1">
-                      <Zap className="w-3 h-3" /> Eventos
-                    </p>
-                    <div className="space-y-1">
-                      {match.events.slice(0, 2).map((event, idx) => (
-                        <div
-                          key={idx}
-                          className="text-xs text-muted-foreground"
-                        >
-                          <span className="font-bold text-foreground">
-                            {event.player}
-                          </span>{" "}
-                          ({event.minute})
-                        </div>
-                      ))}
-                      {match.events.length > 2 && (
-                        <p className="text-xs text-muted-foreground">
-                          +{match.events.length - 2} más
-                        </p>
-                      )}
+              {/* Estadísticas rápidas (posesión) si existen */}
+              {match.stats && match.homeScore !== undefined && (
+                <div className="px-5 py-3 border-t border-border/60">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-bold text-foreground tabular-nums w-8 text-right">
+                      {match.stats.home.possession}%
+                    </span>
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full"
+                        style={{ width: `${match.stats.home.possession}%` }}
+                      />
                     </div>
+                    <span className="font-bold text-foreground tabular-nums w-8">
+                      {match.stats.away.possession}%
+                    </span>
+                    <span className="text-muted-foreground ml-1">posesión</span>
                   </div>
-                )}
-
-                {/* Stats Summary */}
-                {match.stats && (
-                  <div className="mb-4 pt-4 border-t border-primary/20">
-                    <p className="text-xs font-bold text-muted-foreground mb-3">
-                      Estadísticas
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Posesión</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-bold text-foreground">{match.stats.home.possession}%</span>
-                          <span className="text-muted-foreground">-</span>
-                          <span className="font-bold text-foreground">{match.stats.away.possession}%</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Tiros</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-bold text-foreground">{match.stats.home.shots}</span>
-                          <span className="text-muted-foreground">-</span>
-                          <span className="font-bold text-foreground">{match.stats.away.shots}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">A Portería</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-bold text-foreground">{match.stats.home.shotsOnTarget}</span>
-                          <span className="text-muted-foreground">-</span>
-                          <span className="font-bold text-foreground">{match.stats.away.shotsOnTarget}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Footer Info */}
-                <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-primary/20">
-                  <p className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {match.time}
-                  </p>
-                  <p className="flex items-center gap-1">📍 {match.court}</p>
                 </div>
-              </div>
+              )}
 
-              {/* CTA Button */}
-              <div className="bg-primary-50 px-6 py-3 text-center group-hover:bg-primary-100 transition-colors">
-                <p className="text-sm font-bold text-primary flex items-center justify-center gap-1">
+              {/* CTA */}
+              <div className="px-5 py-3 bg-muted/10 group-hover:bg-primary/5 transition-colors text-center">
+                <span className="text-xs font-bold text-primary flex items-center justify-center gap-1">
                   <Play className="w-3 h-3" /> Ver detalles
-                </p>
+                </span>
               </div>
             </Link>
-          ))
-        ) : (
-          <div className="col-span-full text-center py-16">
-            <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg text-muted-foreground">
-              No hay partidos con esos filtros
+          ))}
+        </div>
+      ) : (
+        /* Empty state */
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+          <Trophy className="w-14 h-14 text-muted-foreground opacity-20" />
+          <div>
+            <p className="text-lg font-bold text-muted-foreground">
+              {activeStatus === "live"     && "No hay partidos en vivo"}
+              {activeStatus === "today"    && "No hay partidos hoy"}
+              {activeStatus === "upcoming" && "No hay próximos partidos"}
+              {activeStatus === "finished" && "No hay partidos finalizados"}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {hasActiveFilters
+                ? "Prueba cambiando los filtros"
+                : insideDisciplina
+                  ? `Cuando haya partidos de ${disciplina} aparecerán aquí`
+                  : "Los partidos aparecerán aquí cuando estén disponibles"}
             </p>
           </div>
-        )}
-      </div>
+          {hasActiveFilters && (
+            <button
+              onClick={() => { setSelectedSport(""); setSearchTeam(""); }}
+              className="text-sm font-semibold text-primary underline underline-offset-4"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -4,13 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tournament } from "@/lib/mockTournaments";
 import { ResumenTab } from "./tabs/ResumenTab";
 import { InscripcionesTab } from "./tabs/InscripcionesTab";
-import { MatchesTab } from "./tabs/MatchesTab";
-import { CalendarioTab } from "./tabs/CalendarioTab";
-import { PosicionesTab } from "./tabs/PosicionesTab";
 import { TournamentBracket, Match as BracketMatch } from "./TournamentBracket";
-import { StandingsTable } from "./StandingsTable";
 import { EquiposTab } from "./tabs/EquiposTab";
 import { MisEquiposTab } from "./tabs/MisEquiposTab";
+import { DisciplinasTab } from "./tabs/DisciplinasTab";
 import {
   FixtureTab,
   ActasTab,
@@ -27,7 +24,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TournamentTabsProps {
@@ -52,12 +48,14 @@ export function TournamentTabs({
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768) {
+      if (window.innerWidth < 400) {
+        setVisibleCount(2);
+      } else if (window.innerWidth < 640) {
         setVisibleCount(3);
       } else if (window.innerWidth < 1024) {
         setVisibleCount(4);
       } else {
-        setVisibleCount(5);
+        setVisibleCount(6);
       }
     };
 
@@ -66,15 +64,12 @@ export function TournamentTabs({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Determinar tabs según rol
   const getTabs = () => {
     const publicTabs = [
       { id: "informacion", label: "📋 Información", badge: null },
-      { id: "partidos", label: "⚽ Partidos", badge: null },
-      { id: "calendario", label: "📅 Calendario", badge: null },
-      { id: "posiciones", label: "🏆 Posiciones", badge: null },
-      { id: "equipos", label: "👥 Equipos", badge: null },
-      { id: "galeria", label: "📸 Galería", badge: null },
+      { id: "disciplinas",  label: "🏅 Disciplinas",  badge: null },
+      { id: "equipos",     label: "👥 Equipos",      badge: null },
+      { id: "galeria",     label: "📸 Galería",      badge: null },
     ];
 
     if (!userRole) return publicTabs;
@@ -82,65 +77,60 @@ export function TournamentTabs({
     if (userRole === "DELEGADO_DEPORTES") {
       return [
         { id: "informacion", label: "📋 Información", badge: null },
-        { id: "partidos", label: "⚽ Partidos", badge: null },
-        { id: "misequipos", label: "⭐ Mis Equipos", badge: "1" },
-        { id: "records", label: "📋 Récords", badge: "2" },
-        { id: "calendario", label: "📅 Calendario", badge: null },
-        { id: "posiciones", label: "🏆 Posiciones", badge: null },
-        { id: "equipos", label: "👥 Equipos", badge: null },
+        { id: "disciplinas",  label: "🏅 Disciplinas",  badge: null },
+        { id: "misequipos",  label: "⭐ Mis Equipos",  badge: "1" },
+        { id: "records",     label: "📋 Récords",      badge: "2" },
+        { id: "equipos",     label: "👥 Equipos",      badge: null },
       ];
     }
 
     if (userRole === "COMITE_ORGANIZADOR") {
       return [
-        { id: "informacion", label: "📋 Información", badge: null },
-        { id: "partidos", label: "⚽ Partidos", badge: null },
-        { id: "misequipos", label: "⭐ Mis Equipos", badge: null },
+        { id: "informacion",  label: "📋 Información",  badge: null },
+        { id: "disciplinas",   label: "🏅 Disciplinas",   badge: null },
         { id: "inscripciones", label: "✅ Inscripciones", badge: "5" },
-        { id: "records", label: "📋 Récords", badge: "3" },
-        { id: "fixture", label: "🎲 Fixture", badge: null },
-        { id: "actas", label: "📝 Actas", badge: "3" },
-        { id: "equipos", label: "👥 Equipos", badge: null },
-        { id: "justicia", label: "⚖️ Justicia", badge: null },
-        { id: "reportes", label: "📊 Reportes", badge: null },
+        { id: "records",      label: "📋 Récords",       badge: "3" },
+        { id: "fixture",      label: "🎲 Fixture",       badge: null },
+        { id: "actas",        label: "📝 Actas",         badge: "3" },
+        { id: "equipos",      label: "👥 Equipos",       badge: null },
+        { id: "justicia",     label: "⚖️ Justicia",      badge: null },
+        { id: "reportes",     label: "📊 Reportes",      badge: null },
       ];
     }
 
     if (userRole === "ADMINISTRADOR") {
       return [
-        { id: "informacion", label: "📋 Información", badge: null },
-        { id: "partidos", label: "⚽ Partidos", badge: null },
-        { id: "configuracion", label: "⚙️ Configuración", badge: null },
-        { id: "misequipos", label: "⭐ Mis Equipos", badge: null },
-        { id: "inscripciones", label: "✅ Inscripciones", badge: null },
-        { id: "records", label: "📋 Récords", badge: null },
-        { id: "fixture", label: "🎲 Fixture", badge: null },
-        { id: "actas", label: "📝 Actas", badge: null },
-        { id: "equipos", label: "👥 Equipos", badge: null },
-        { id: "justicia", label: "⚖️ Justicia", badge: null },
-        { id: "reportes", label: "📊 Reportes", badge: null },
-        { id: "comites", label: "👔 Comités", badge: null },
-        { id: "analitica", label: "📈 Analítica", badge: null },
+        { id: "informacion",  label: "📋 Información",  badge: null },
+        { id: "disciplinas",   label: "🏅 Disciplinas",   badge: null },
+        { id: "configuracion", label: "⚙️ Config",        badge: null },
+        { id: "inscripciones", label: "✅ Inscrip.",      badge: null },
+        { id: "records",      label: "📋 Récords",       badge: null },
+        { id: "fixture",      label: "🎲 Fixture",       badge: null },
+        { id: "actas",        label: "📝 Actas",         badge: null },
+        { id: "equipos",      label: "👥 Equipos",       badge: null },
+        { id: "justicia",     label: "⚖️ Justicia",      badge: null },
+        { id: "reportes",     label: "📊 Reportes",      badge: null },
+        { id: "comites",      label: "👔 Comités",       badge: null },
+        { id: "analitica",    label: "📈 Analítica",     badge: null },
       ];
     }
 
     if (userRole === "SUPER_ADMIN") {
       return [
-        { id: "informacion", label: "📋 Información", badge: null },
-        { id: "partidos", label: "⚽ Partidos", badge: null },
-        { id: "configuracion", label: "⚙️ Configuración", badge: null },
-        { id: "misequipos", label: "⭐ Mis Equipos", badge: null },
-        { id: "inscripciones", label: "✅ Inscripciones", badge: null },
-        { id: "records", label: "📋 Récords", badge: null },
-        { id: "fixture", label: "🎲 Fixture", badge: null },
-        { id: "actas", label: "📝 Actas", badge: null },
-        { id: "equipos", label: "👥 Equipos", badge: null },
-        { id: "justicia", label: "⚖️ Justicia", badge: null },
-        { id: "reportes", label: "📊 Reportes", badge: null },
-        { id: "comites", label: "👔 Comités", badge: null },
-        { id: "analitica", label: "📈 Analítica", badge: null },
-        { id: "auditoria", label: "🔍 Auditoría", badge: null },
-        { id: "sistema", label: "🛠️ Sistema", badge: null },
+        { id: "informacion",  label: "📋 Información",  badge: null },
+        { id: "disciplinas",   label: "🏅 Disciplinas",   badge: null },
+        { id: "configuracion", label: "⚙️ Config",        badge: null },
+        { id: "inscripciones", label: "✅ Inscrip.",      badge: null },
+        { id: "records",      label: "📋 Récords",       badge: null },
+        { id: "fixture",      label: "🎲 Fixture",       badge: null },
+        { id: "actas",        label: "📝 Actas",         badge: null },
+        { id: "equipos",      label: "👥 Equipos",       badge: null },
+        { id: "justicia",     label: "⚖️ Justicia",      badge: null },
+        { id: "reportes",     label: "📊 Reportes",      badge: null },
+        { id: "comites",      label: "👔 Comités",       badge: null },
+        { id: "analitica",    label: "📈 Analítica",     badge: null },
+        { id: "auditoria",    label: "🔍 Auditoría",     badge: null },
+        { id: "sistema",      label: "🛠️ Sistema",       badge: null },
       ];
     }
 
@@ -148,7 +138,6 @@ export function TournamentTabs({
   };
 
   const tabs = getTabs();
-
   const visibleTabs = tabs.slice(0, visibleCount);
   const overflowTabs = tabs.slice(visibleCount);
   const isOverflowActive = overflowTabs.some((tab) => tab.id === activeTab);
@@ -168,38 +157,42 @@ export function TournamentTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      {/* ── Barra de tabs ──────────────────────────────────────────────────── */}
       <TabsList className="bg-white border-b border-border flex items-center justify-start rounded-none p-0 h-auto w-full">
         {visibleTabs.map((tab) => (
           <TabsTrigger
             key={tab.id}
             value={tab.id}
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-4 py-3 relative h-12"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-2.5 sm:px-4 py-3 relative h-12 whitespace-nowrap flex-shrink-0 text-xs sm:text-sm"
           >
             <span>{tab.label}</span>
             {tab.badge && (
-              <Badge className="ml-2 bg-red-500 hover:bg-red-600">
+              <Badge className="ml-1.5 bg-red-500 hover:bg-red-600 text-[10px] h-4 px-1">
                 {tab.badge}
               </Badge>
             )}
           </TabsTrigger>
         ))}
 
+        {/* Botón de overflow — solo muestra "···" sin texto para no desbordar en móvil */}
         {overflowTabs.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  "flex items-center gap-2 px-4 py-3 h-12 font-medium text-sm border-b-2 border-transparent transition-all hover:bg-muted/50 outline-none",
-                  isOverflowActive && "border-primary text-primary"
+                  "flex items-center gap-1 px-3 h-12 font-bold text-base border-b-2 border-transparent transition-all hover:bg-muted/50 outline-none flex-shrink-0 tracking-widest leading-none",
+                  isOverflowActive
+                    ? "border-primary text-primary"
+                    : "text-muted-foreground"
                 )}
+                aria-label="Más secciones"
               >
-                <span>Más</span>
+                ···
                 {totalOverflowBadges > 0 && (
-                  <Badge className="bg-red-500 hover:bg-red-600">
+                  <Badge className="bg-red-500 hover:bg-red-600 text-[10px] h-4 px-1 ml-0.5">
                     {totalOverflowBadges}
                   </Badge>
                 )}
-                <ChevronDown className="w-4 h-4 ml-1 opacity-70" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -225,17 +218,24 @@ export function TournamentTabs({
         )}
       </TabsList>
 
-      {/* Contenido de cada tab */}
+      {/* ── Contenido de tabs ─────────────────────────────────────────────── */}
+
       <TabsContent value="informacion" className="mt-8">
         <ResumenTab tournament={tournament} userRole={userRole} />
       </TabsContent>
 
-      <TabsContent value="partidos" className="mt-8">
-        <MatchesTab
-          tournamentId={tournament.id}
-          tournamentSlug={tournament.slug}
-          userRole={userRole}
-        />
+      <TabsContent value="disciplinas" className="mt-8">
+        <DisciplinasTab tournament={tournament} userRole={userRole} />
+      </TabsContent>
+
+      <TabsContent value="equipos" className="mt-8">
+        <EquiposTab tournament={tournament} />
+      </TabsContent>
+
+      <TabsContent value="galeria" className="mt-8">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Galería de fotos — Próximamente</p>
+        </div>
       </TabsContent>
 
       {userRole === "DELEGADO_DEPORTES" && (
@@ -243,7 +243,6 @@ export function TournamentTabs({
           <TabsContent value="misequipos" className="mt-8">
             <MisEquiposTab tournament={tournament} userRole={userRole} />
           </TabsContent>
-
           <TabsContent value="records" className="mt-8">
             <RecordsManagementPanel
               tournamentId={tournament.id}
@@ -257,10 +256,6 @@ export function TournamentTabs({
         userRole === "ADMINISTRADOR" ||
         userRole === "SUPER_ADMIN") && (
         <>
-          <TabsContent value="misequipos" className="mt-8">
-            <MisEquiposTab tournament={tournament} userRole={userRole} />
-          </TabsContent>
-
           <TabsContent value="inscripciones" className="mt-8">
             <InscripcionesTab
               tournamentId={tournament.id}
@@ -290,181 +285,59 @@ export function TournamentTabs({
               onRegistrarActa={onRegistrarActa}
             />
           </TabsContent>
+
+          <TabsContent value="justicia" className="mt-8">
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                Tribunal deportivo y sanciones
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reportes" className="mt-8">
+            <ReportesTab tournamentId={tournament.id} />
+          </TabsContent>
         </>
       )}
 
-      {userRole === "ADMINISTRADOR" && (
+      {(userRole === "ADMINISTRADOR" || userRole === "SUPER_ADMIN") && (
         <>
-          <TabsContent value="misequipos" className="mt-8">
-            <MisEquiposTab tournament={tournament} userRole={userRole} />
-          </TabsContent>
-
           <TabsContent value="configuracion" className="mt-8">
             <ConfiguracionTab tournamentId={tournament.id} />
+          </TabsContent>
+
+          <TabsContent value="comites" className="mt-8">
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                Gestión de comités — Próximamente
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="analitica" className="mt-8">
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                Analítica y estadísticas avanzadas
+              </p>
+            </div>
           </TabsContent>
         </>
       )}
 
       {userRole === "SUPER_ADMIN" && (
         <>
-          <TabsContent value="configuracion" className="mt-8">
-            <ConfiguracionTab tournamentId={tournament.id} />
-          </TabsContent>
-
           <TabsContent value="auditoria" className="mt-8">
             <AuditoriaTab tournamentId={tournament.id} />
           </TabsContent>
 
           <TabsContent value="sistema" className="mt-8">
-            <SistemaTab tournamentId={tournament.id} onEliminar={onEliminar} />
+            <SistemaTab
+              tournamentId={tournament.id}
+              onEliminar={onEliminar}
+            />
           </TabsContent>
         </>
       )}
-
-      {/* Tabs comunes */}
-      <TabsContent value="calendario" className="mt-8">
-        <CalendarioTab tournamentSlug={tournament.slug} />
-      </TabsContent>
-
-      <TabsContent value="posiciones" className="mt-8">
-        <PosicionesTab tournamentSlug={tournament.slug} />
-      </TabsContent>
-
-      <TabsContent value="equipos" className="mt-8">
-        <EquiposTab tournament={tournament} />
-      </TabsContent>
-
-      <TabsContent value="justicia" className="mt-8">
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            Tribunal deportivo y sanciones
-          </p>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="reportes" className="mt-8">
-        {userRole === "ADMINISTRADOR" || userRole === "SUPER_ADMIN" ? (
-          <ReportesTab tournamentId={tournament.id} />
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Sin permiso</p>
-          </div>
-        )}
-      </TabsContent>
-
-      <TabsContent value="comites" className="mt-8">
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            Gestión de comités - Próximamente
-          </p>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="analitica" className="mt-8">
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            Analítica y estadísticas avanzadas
-          </p>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="galeria" className="mt-8">
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Galería de fotos</p>
-        </div>
-      </TabsContent>
     </Tabs>
-  );
-}
-
-// Tabs administrativos importados desde ./tabs/AdminTabs.tsx
-// Tabs de inscripciones importados desde ./tabs/InscripcionesTab.tsx
-// Tab de Mis Equipos importado desde ./tabs/MisEquiposTab.tsx
-
-// Admin Panel para gestionar ganadores del bracket
-function AdminBracketPanel({
-  matches,
-  onUpdateWinner,
-}: {
-  matches: BracketMatch[];
-  onUpdateWinner: (matchId: string, winnerTeamId: string) => void;
-}) {
-  return (
-    <div className="bg-blue-50 rounded-2xl border-2 border-blue-200 p-8">
-      <div className="mb-6">
-        <h3 className="text-2xl font-bold text-blue-900 mb-2">
-          ⚙️ Panel de Administración
-        </h3>
-        <p className="text-blue-700">
-          Marca los ganadores de cada partido para actualizar automáticamente el
-          bracket
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {matches
-          .filter((m) => m.home && m.away)
-          .map((match) => (
-            <div
-              key={match.id}
-              className="bg-white rounded-lg border-2 border-blue-200 p-4 space-y-3"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-bold text-foreground text-sm uppercase">
-                  {match.round === "cuartos" && "Cuartos"}
-                  {match.round === "semifinales" && "Semifinales"}
-                  {match.round === "final" && "Final"}
-                  {match.group && ` - Grupo ${match.group}`}
-                </h4>
-                {match.winnerId && (
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                    ✓ Ganador marcado
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <button
-                  onClick={() => onUpdateWinner(match.id, match.home!.id)}
-                  className={`w-full p-3 rounded-lg text-left font-medium transition-all border-2 ${
-                    match.winnerId === match.home!.id
-                      ? "bg-green-100 border-green-300 text-green-700"
-                      : "bg-white border-border text-foreground hover:border-primary hover:bg-primary/5"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{match.home!.name}</span>
-                    {match.winnerId === match.home!.id && (
-                      <span className="text-lg">✓</span>
-                    )}
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => onUpdateWinner(match.id, match.away!.id)}
-                  className={`w-full p-3 rounded-lg text-left font-medium transition-all border-2 ${
-                    match.winnerId === match.away!.id
-                      ? "bg-green-100 border-green-300 text-green-700"
-                      : "bg-white border-border text-foreground hover:border-primary hover:bg-primary/5"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{match.away!.name}</span>
-                    {match.winnerId === match.away!.id && (
-                      <span className="text-lg">✓</span>
-                    )}
-                  </div>
-                </button>
-              </div>
-            </div>
-          ))}
-      </div>
-
-      {matches.filter((m) => m.home && m.away).length === 0 && (
-        <div className="text-center py-8 text-blue-700">
-          <p className="font-medium">No hay partidos para configurar</p>
-        </div>
-      )}
-    </div>
   );
 }

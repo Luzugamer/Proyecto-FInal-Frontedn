@@ -4,8 +4,6 @@ import {
   X,
   User,
   LogOut,
-  Settings,
-  LayoutDashboard,
   ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
@@ -15,8 +13,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -27,40 +23,30 @@ export default function Header() {
   const navigate = useNavigate();
 
   const baseLinks = [
-    { label: "Inicio", href: "/" },
-    { label: "Torneos", href: "/torneos" },
-    { label: "Noticias", href: "/noticias" },
+    { label: "Inicio",     href: "/" },
+    { label: "Torneos",    href: "/torneos" },
+    { label: "Noticias",   href: "/noticias" },
     { label: "Calendario", href: "/calendario" },
   ];
 
+  // ── Los admin links solo se filtran por ROLES, no por permission,
+  //    porque el permission puede no estar asignado a todos los roles permitidos.
   const adminLinks = [
     {
       label: "Usuarios",
       href: "/dashboard/usuarios",
       roles: ["SUPER_ADMIN", "ADMINISTRADOR"],
-      permission: "usuarios.ver",
     },
     {
       label: "Noticias",
       href: "/dashboard/admin/noticias",
       roles: ["SUPER_ADMIN", "ADMINISTRADOR", "COMITE_ORGANIZADOR"],
-      permission: "portal.gestionar",
-    },
-    {
-      label: "Configuración",
-      href: "/dashboard/configuracion",
-      roles: ["SUPER_ADMIN"],
-      permission: "configuracion.acceder",
     },
   ];
 
   const filteredAdminLinks = adminLinks.filter((link) => {
-    if (link.roles && !link.roles.includes(user?.rol as string)) return false;
-    if (link.permission && !hasPermission(link.permission)) return false;
-    return true;
+    return link.roles.includes(user?.rol as string);
   });
-
-  const allLinks = [...baseLinks];
 
   const handleLogout = async () => {
     await logout();
@@ -69,42 +55,35 @@ export default function Header() {
 
   const getRoleBadgeColor = (rol: string) => {
     switch (rol) {
-      case "SUPER_ADMIN":
-        return "bg-purple-100 text-purple-700 border-purple-200";
-      case "ADMINISTRADOR":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      case "COMITE_ORGANIZADOR":
-        return "bg-green-100 text-green-700 border-green-200";
-      case "DELEGADO_DEPORTES":
-        return "bg-orange-100 text-orange-700 border-orange-200";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+      case "SUPER_ADMIN":        return "bg-purple-100 text-purple-700 border-purple-200";
+      case "ADMINISTRADOR":      return "bg-blue-100 text-blue-700 border-blue-200";
+      case "COMITE_ORGANIZADOR": return "bg-green-100 text-green-700 border-green-200";
+      case "DELEGADO_DEPORTES":  return "bg-orange-100 text-orange-700 border-orange-200";
+      default:                   return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
 
-  const getRoleLabel = (rol: string) => {
-    return rol.replace("_", " ");
-  };
+  const getRoleLabel = (rol: string) => rol.replace(/_/g, " ");
 
   return (
     <header className="sticky top-0 z-50 w-full shadow-md bg-white">
       <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
+
         {/* Logo */}
         <Link
           to="/"
           className="flex items-center gap-3 font-bold text-lg text-primary hover:opacity-80 transition-opacity"
         >
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-lg">
-            🏆
+          <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center overflow-hidden">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
-          <span className="hidden sm:inline font-montserrat">SIGED</span>
         </Link>
 
-        {/* Desktop Navigation - Región Común y Continuidad */}
+        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-1">
-          {/* Regular Links - Proximidad */}
+          {/* Links públicos */}
           <div className="flex items-center gap-1 px-2">
-            {allLinks.map((link) => (
+            {baseLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
@@ -115,12 +94,12 @@ export default function Header() {
             ))}
           </div>
 
-          {/* Separator - Conectividad */}
+          {/* Separador */}
           {filteredAdminLinks.length > 0 && (
-            <div className="w-1 h-6 bg-gradient-to-b from-transparent via-border to-transparent mx-2"></div>
+            <div className="w-px h-6 bg-border mx-2" />
           )}
 
-          {/* Admin Links - Similitud visual */}
+          {/* Links de administración */}
           {filteredAdminLinks.length > 0 && (
             <div className="flex items-center gap-1 px-2">
               {filteredAdminLinks.map((link) => (
@@ -137,40 +116,34 @@ export default function Header() {
           )}
         </div>
 
-        {/* User Actions - Región Común */}
+        {/* User Actions */}
         <div className="hidden md:flex items-center gap-3 pl-3 border-l-2 border-border">
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
-              {/* User Info - Proximidad y Similitud */}
               <div className="text-right hidden lg:block">
-                <p className="text-sm font-bold leading-tight text-foreground">
-                  {user?.nombre}
-                </p>
+                <p className="text-sm font-bold leading-tight text-foreground">{user?.nombre}</p>
                 <div className="flex items-center justify-end gap-2 mt-1">
                   {user?.facultad && (
                     <span className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-semibold">
                       {user.facultad.codigo}
                     </span>
                   )}
-                  <span
-                    className={cn(
-                      "text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide",
-                      getRoleBadgeColor(user?.rol as string),
-                    )}
-                  >
+                  <span className={cn(
+                    "text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide border",
+                    getRoleBadgeColor(user?.rol as string),
+                  )}>
                     {getRoleLabel(user?.rol as string)}
                   </span>
                 </div>
               </div>
 
-              {/* User Menu - Similitud y Conectividad */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     className="relative h-11 w-11 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 hover:from-primary/30 hover:to-primary/20 p-0 overflow-hidden border-2 border-primary/30 hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md"
                   >
-                    <User className="h-6 w-6 text-primary font-bold" />
+                    <User className="h-6 w-6 text-primary" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
@@ -187,7 +160,7 @@ export default function Header() {
           ) : (
             <Link
               to="/login"
-              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-700 transition-colors inline-block"
+              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-700 transition-colors"
             >
               Ingresar
             </Link>
@@ -200,76 +173,80 @@ export default function Header() {
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label="Toggle menu"
         >
-          {isMenuOpen ? (
-            <X className="w-6 h-6" />
-          ) : (
-            <Menu className="w-6 h-6" />
-          )}
+          {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </nav>
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
         <div className="md:hidden border-t border-border bg-white animate-in slide-in-from-top duration-300">
-          <div className="container mx-auto px-4 py-4 space-y-3">
+          <div className="container mx-auto px-4 py-4 space-y-1">
+
+            {/* Info usuario */}
             {isAuthenticated && (
               <div className="flex items-center gap-3 p-3 bg-muted rounded-xl mb-4">
                 <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
                   <User className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm">
-                    {user?.nombre} {user?.apellido}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {getRoleLabel(user?.rol as string)}
-                  </p>
+                  <p className="font-bold text-sm">{user?.nombre} {user?.apellido}</p>
+                  <p className="text-xs text-muted-foreground">{getRoleLabel(user?.rol as string)}</p>
                 </div>
               </div>
             )}
 
-            {allLinks.map((link) => (
+            {/* Links públicos */}
+            {baseLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
-                className="block py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+                className="block py-2.5 px-3 text-sm font-medium text-foreground hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 {link.label}
               </Link>
             ))}
 
-            {filteredAdminLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="block py-2 text-sm font-bold text-primary hover:text-primary-700 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            {isAuthenticated ? (
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMenuOpen(false);
-                }}
-                className="w-full mt-4 px-4 py-2 bg-destructive/10 text-destructive rounded-lg font-bold hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Cerrar Sesión
-              </button>
-            ) : (
-              <Link
-                to="/login"
-                className="w-full mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-700 transition-colors block text-center"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Ingresar
-              </Link>
+            {/* Links admin */}
+            {filteredAdminLinks.length > 0 && (
+              <div className="pt-2 mt-2 border-t border-border space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3 pb-1">
+                  Administración
+                </p>
+                {filteredAdminLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className="flex items-center gap-2 py-2.5 px-3 text-sm font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
             )}
+
+            {/* Logout / Login */}
+            <div className="pt-2 mt-2 border-t border-border">
+              {isAuthenticated ? (
+                <button
+                  onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                  className="w-full mt-2 px-4 py-2.5 bg-destructive/10 text-destructive rounded-lg font-bold hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Cerrar Sesión
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  className="w-full mt-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-700 transition-colors block text-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Ingresar
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}

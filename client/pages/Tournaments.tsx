@@ -82,30 +82,6 @@ export default function Tournaments() {
   return (
     <div className="w-full bg-gradient-to-b from-primary-50 to-white min-h-screen py-12">
       <div className="container mx-auto px-4">
-        {/* Admin Hero Section */}
-        {isAdmin && (
-          <div className="mb-12 bg-gradient-to-r from-primary-700 to-primary-600 rounded-2xl p-12 text-white shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-5xl mb-3">🏆</div>
-                <h2 className="text-3xl font-bold mb-2">
-                  ADMINISTRACIÓN DE TORNEOS
-                </h2>
-                <p className="text-primary-100">
-                  Control total de olimpiadas y competencias
-                </p>
-              </div>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-yellow-400 hover:bg-yellow-500 text-primary-900 font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-transform hover:scale-105 shadow-lg text-lg"
-              >
-                <Plus className="w-5 h-5" />
-                CREAR NUEVO TORNEO
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Header - Proximidad y Continuidad */}
         <div className="mb-16">
           <div className="flex items-start gap-4">
@@ -119,6 +95,15 @@ export default function Tournaments() {
                 del año
               </p>
             </div>
+            {isAdmin && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="ml-auto bg-yellow-400 hover:bg-yellow-500 text-primary-900 font-bold py-5 px-6 rounded-lg flex items-center gap-2 transition-transform hover:scale-105 shadow-lg text-lg"
+              >
+                <Plus className="w-5 h-5" />
+                CREAR NUEVO TORNEO
+              </button>
+            )}
           </div>
         </div>
 

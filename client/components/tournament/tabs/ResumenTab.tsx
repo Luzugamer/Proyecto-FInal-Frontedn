@@ -1,16 +1,17 @@
 import { Tournament } from "@/lib/mockTournaments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Calendar, 
-  Trophy, 
-  Users, 
-  FileText, 
+import {
+  Calendar,
+  Trophy,
+  Users,
+  FileText,
   Activity,
   CheckCircle2,
   Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BracketViewer } from "../BracketViewer";
 
 interface ResumenTabProps {
   tournament: Tournament;
@@ -52,18 +53,6 @@ export function ResumenTab({ tournament, userRole }: ResumenTabProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 rounded-lg">
-                <span className="text-sm font-medium text-muted-foreground">Estado:</span>
-                {getStatusBadge(tournament.estado)}
-              </div>
-              <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 rounded-lg">
-                <Calendar className="w-4 h-4 text-primary" />
-                <span className="text-sm">
-                  {new Date(tournament.fechaCompetenciaInicio).toLocaleDateString()} - {new Date(tournament.fechaCompetenciaFin).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-4 border rounded-xl bg-card">
