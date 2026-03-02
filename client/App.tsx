@@ -7,17 +7,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/Layout";
+import ScrollToTop from "./components/layout/ScrollToTop";
 import Index from "./pages/Index";
 import Calendar from "./pages/Calendar";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetail from "./pages/TournamentDetail";
-import MatchDetailInTournament from "./pages/MatchDetailInTournament";
 import MatchDetail from "./pages/MatchDetail";
-import SportMatches from "./pages/SportMatches";
 import Login from "./pages/Login";
 import Teams from "./pages/Teams";
 import Users from "./pages/Users";
-import Settings from "./pages/Settings";
 import News from "./pages/News";
 import NewsDetail from "./pages/NewsDetail";
 import AdminNews from "./pages/AdminNews";
@@ -34,6 +32,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToTop />
         <Layout>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -41,10 +40,9 @@ const App = () => (
             <Route path="/torneo/:slug" element={<TournamentDetail />} />
             <Route
               path="/torneo/:slug/partidos/:id"
-              element={<MatchDetailInTournament />}
+              element={<MatchDetail />}
             />
             <Route path="/partidos/:id" element={<MatchDetail />} />
-            <Route path="/deportes/:deporte" element={<SportMatches />} />
             <Route path="/calendario" element={<Calendar />} />
             <Route path="/login" element={<Login />} />
             <Route path="/noticias" element={<News />} />
@@ -56,14 +54,6 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["SUPER_ADMIN", "ADMINISTRADOR"]}>
                   <Users />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/configuracion"
-              element={
-                <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
-                  <Settings />
                 </ProtectedRoute>
               }
             />

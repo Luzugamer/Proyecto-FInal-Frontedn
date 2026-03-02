@@ -15,16 +15,13 @@ interface TeamByDiscipline {
   }[];
 }
 
-// Mock data de equipos por disciplina
 const getMockTeamsData = (tournament: Tournament): TeamByDiscipline[] => {
   const teamsByDiscipline: Record<string, any[]> = {};
 
-  // Inicializar para cada disciplina
   tournament.disciplinas.forEach((disciplina) => {
     teamsByDiscipline[disciplina] = [];
   });
 
-  // Equipos base que se distribuyen entre disciplinas
   const baseTeams = [
     { facultad: "Agronomía", id: "ag" },
     { facultad: "Ingeniería", id: "ing" },
@@ -38,7 +35,6 @@ const getMockTeamsData = (tournament: Tournament): TeamByDiscipline[] => {
     { facultad: "Derecho", id: "der" },
   ];
 
-  // Distribuir equipos entre disciplinas
   let teamIndex = 0;
   tournament.disciplinas.forEach((disciplina) => {
     for (let i = 0; i < 3; i++) {
@@ -65,10 +61,7 @@ export function EquiposTab({ tournament }: EquiposTabProps) {
     tournament.disciplinas[0] || null
   );
 
-  const teamsData = useMemo(
-    () => getMockTeamsData(tournament),
-    [tournament]
-  );
+  const teamsData = useMemo(() => getMockTeamsData(tournament), [tournament]);
 
   const totalTeams = useMemo(
     () => teamsData.reduce((sum, d) => sum + d.teams.length, 0),
@@ -76,37 +69,27 @@ export function EquiposTab({ tournament }: EquiposTabProps) {
   );
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-3">
-        <h2 className="text-4xl md:text-5xl font-black text-foreground uppercase tracking-widest">
-          Equipos Inscritos
-        </h2>
-        <p className="text-muted-foreground text-lg">
-          Total de {totalTeams} equipos distribuidos en {tournament.disciplinas.length} disciplinas
+    <div className="space-y-6">
+      {/* ── Título estandarizado ──────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-xl font-bold text-foreground">👥 Equipos Inscritos</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {totalTeams} equipos distribuidos en {tournament.disciplinas.length} disciplinas
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border-2 border-primary/20 p-6 text-center">
-          <p className="text-muted-foreground text-sm font-semibold mb-2">
-            Disciplinas
-          </p>
-          <p className="text-4xl font-black text-primary">
-            {tournament.disciplinas.length}
-          </p>
+          <p className="text-muted-foreground text-sm font-semibold mb-2">Disciplinas</p>
+          <p className="text-4xl font-black text-primary">{tournament.disciplinas.length}</p>
         </div>
         <div className="bg-gradient-to-br from-blue-100/50 to-blue-50/50 rounded-xl border-2 border-blue-200 p-6 text-center">
-          <p className="text-muted-foreground text-sm font-semibold mb-2">
-            Equipos Totales
-          </p>
+          <p className="text-muted-foreground text-sm font-semibold mb-2">Equipos Totales</p>
           <p className="text-4xl font-black text-blue-600">{totalTeams}</p>
         </div>
         <div className="bg-gradient-to-br from-purple-100/50 to-purple-50/50 rounded-xl border-2 border-purple-200 p-6 text-center">
-          <p className="text-muted-foreground text-sm font-semibold mb-2">
-            Promedio por Disciplina
-          </p>
+          <p className="text-muted-foreground text-sm font-semibold mb-2">Promedio por Disciplina</p>
           <p className="text-4xl font-black text-purple-600">
             {Math.round(totalTeams / tournament.disciplinas.length)}
           </p>
@@ -120,13 +103,10 @@ export function EquiposTab({ tournament }: EquiposTabProps) {
             key={data.disciplina}
             className="rounded-xl border-2 border-primary/30 overflow-hidden shadow-md hover:shadow-lg transition-shadow"
           >
-            {/* Header */}
             <button
               onClick={() =>
                 setExpandedDisciplina(
-                  expandedDisciplina === data.disciplina
-                    ? null
-                    : data.disciplina
+                  expandedDisciplina === data.disciplina ? null : data.disciplina
                 )
               }
               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 px-6 py-5 text-white font-bold uppercase tracking-widest transition-all flex items-center justify-between group"
@@ -145,7 +125,6 @@ export function EquiposTab({ tournament }: EquiposTabProps) {
               />
             </button>
 
-            {/* Content */}
             {expandedDisciplina === data.disciplina && (
               <div className="bg-white p-6">
                 {data.teams.length > 0 ? (
@@ -161,9 +140,7 @@ export function EquiposTab({ tournament }: EquiposTabProps) {
                               <h4 className="font-black text-lg text-foreground group-hover:text-primary transition-colors">
                                 {team.nombre}
                               </h4>
-                              <p className="text-sm text-muted-foreground">
-                                {team.facultad}
-                              </p>
+                              <p className="text-sm text-muted-foreground">{team.facultad}</p>
                             </div>
                             <div className="text-2xl">⚽</div>
                           </div>
@@ -188,8 +165,7 @@ export function EquiposTab({ tournament }: EquiposTabProps) {
         ))}
       </div>
 
-      {/* Footer Info */}
-      <div className="bg-primary/5 rounded-xl border border-primary/20 p-6 text-center">
+      <div className="bg-primary/5 rounded-xl border border-primary/20 p-4 text-center">
         <p className="text-sm text-muted-foreground">
           💡 Haz clic en una disciplina para ver los equipos inscritos
         </p>
