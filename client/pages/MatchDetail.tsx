@@ -105,38 +105,39 @@ export function MatchDetail() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
-
-      {/* ── Breadcrumb ─────────────────────────────────────────────────────── */}
+      {/* Breadcrumb Navigation */}
       <div className="border-b border-border bg-white sticky top-16 z-30">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-4 space-y-4">
           <div className="flex items-center gap-2 text-sm">
-            <Link to="/torneos" className="text-muted-foreground hover:text-foreground">Torneos</Link>
+            <Link
+              to="/torneos"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Torneos
+            </Link>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <Link to={slug ? `/torneo/${slug}` : "/torneos"} className="text-muted-foreground hover:text-foreground">
+            <span className="text-muted-foreground">
               {mockApiMatch?.tournament || "Torneo"}
-            </Link>
+            </span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <Link to={slug ? `/torneo/${slug}?tab=partidos` : "/torneos"} className="text-muted-foreground hover:text-foreground">
+            <span className="text-muted-foreground">
               Partidos
-            </Link>
+            </span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <span className="font-bold text-foreground truncate max-w-[200px]">
+            <span className="font-bold text-foreground">
               {match.equipoA.nombre} vs {match.equipoB.nombre}
             </span>
           </div>
+          <button
+            onClick={() => slug && navigate(`/torneo/${slug}`)}
+            className="font-bold text-foreground hover:text-primary transition-colors text-sm"
+          >
+            ← Volver al Torneo
+          </button>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8 space-y-8">
-
-        {/* Volver */}
-        <button
-          onClick={() => slug && navigate(`/torneo/${slug}`)}
-          className="font-bold text-foreground hover:text-primary transition-colors"
-        >
-          ← Volver al Torneo
-        </button>
-
         {/* ── Card info del partido ──────────────────────────────────────────── */}
         <Card>
           <CardHeader>

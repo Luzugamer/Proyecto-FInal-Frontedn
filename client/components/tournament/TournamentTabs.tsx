@@ -46,6 +46,19 @@ export function TournamentTabs({
   const [activeTab, setActiveTab] = useState("informacion");
   const [visibleCount, setVisibleCount] = useState(5);
 
+  // Restaurar tab guardado al montar y guardar cambios
+  useEffect(() => {
+    const savedTab = localStorage.getItem(`tournament_tab_${tournament.slug}`);
+    if (savedTab) {
+      setActiveTab(savedTab);
+    }
+  }, [tournament.slug]);
+
+  // Guardar tab activo en localStorage cuando cambia
+  useEffect(() => {
+    localStorage.setItem(`tournament_tab_${tournament.slug}`, activeTab);
+  }, [activeTab, tournament.slug]);
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 400) {

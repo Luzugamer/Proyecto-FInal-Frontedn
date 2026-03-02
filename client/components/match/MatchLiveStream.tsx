@@ -57,16 +57,6 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     { id: 8, usuario: "DelegadoFIIS", texto: "Estuvo bien la tarjeta pero fue muy dura la falta", ts: "15:24", tipo: "normal", avatar: "💻" },
 ];
 
-const RANDOM_MESSAGES: Omit<ChatMessage, "id" | "ts">[] = [
-    { usuario: "Hincha01", texto: "¡Tremendo partido! 🔥", tipo: "normal", avatar: "👤" },
-    { usuario: "ProfeLópez", texto: "Muy buen nivel técnico esta temporada", tipo: "normal", avatar: "👩‍🏫" },
-    { usuario: "Estudiante22", texto: "¿Alguien sabe a qué hora es la final?", tipo: "normal", avatar: "🎓" },
-    { usuario: "FIA_Oficial", texto: "¡Arriba la facultad! 💪🌾", tipo: "normal", avatar: "🌾" },
-    { usuario: "Arbitro_UNAS", texto: "Gran disciplina de ambos equipos hoy", tipo: "normal", avatar: "🟨" },
-    { usuario: "Delegado_FCA", texto: "Nuestro turno viene la próxima semana 👀", tipo: "normal", avatar: "💰" },
-    { usuario: "Cachimbo2026", texto: "Primera olimpiada que sigo, ¡épico! 🏟️", tipo: "normal", avatar: "⭐" },
-];
-
 const LIVE_EVENTS: LiveEvent[] = [
     { id: 1, minuto: 12, tipo: "gol", descripcion: "GOL — Diego Flores (FIA)", equipo: "A" },
     { id: 2, minuto: 23, tipo: "tarjeta_amarilla", descripcion: "Óscar Mendoza (FIIS)", equipo: "B" },
@@ -95,28 +85,21 @@ export function MatchLiveStream({ match }: MatchLiveStreamProps) {
     const [muted, setMuted] = useState(false);
     const [minutoVivo, setMinutoVivo] = useState(isLive ? 67 : isFinished ? 90 : 0);
     const chatEndRef = useRef<HTMLDivElement>(null);
+    const isFirstRender = useRef(true);
 
-    // Auto-scroll chat
+    // Auto-scroll solo cuando llega un mensaje nuevo, no en la carga inicial
     useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, [messages]);
 
     // Espectadores parpadeantes (solo en vivo)
     useEffect(() => {
         if (!isLive) return;
         const iv = setInterval(() => setViewers((v) => v + Math.floor(Math.random() * 5) - 2), 4000);
-        return () => clearInterval(iv);
-    }, [isLive]);
-
-    // Mensajes automáticos (solo en vivo)
-    useEffect(() => {
-        if (!isLive) return;
-        const iv = setInterval(() => {
-            const base = RANDOM_MESSAGES[Math.floor(Math.random() * RANDOM_MESSAGES.length)];
-            const now = new Date();
-            const ts = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-            setMessages((prev) => [...prev.slice(-40), { ...base, id: Date.now(), ts }]);
-        }, 6000);
         return () => clearInterval(iv);
     }, [isLive]);
 
