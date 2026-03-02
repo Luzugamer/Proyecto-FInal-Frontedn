@@ -1,32 +1,8 @@
 import { Link } from "react-router-dom";
 import { Play, Users, Flame } from "lucide-react";
-interface Match {
-  id: number;
-  home: string;
-  away: string;
-  homeScore: number;
-  awayScore: number;
-  sport: string;
-  time: string;
-  viewers: number;
-  location: string;
-  isLive: boolean;
-}
-
-const liveMatches: Match[] = [
-  {
-    id: 1,
-    home: "Agronomía",
-    away: "Zootecnia",
-    homeScore: 3,
-    awayScore: 1,
-    sport: "Fútbol",
-    time: "78'",
-    viewers: 1234,
-    location: "Estadio UNAS",
-    isLive: true,
-  },
-];
+import { usePublicTournaments } from "@/hooks/useTournaments";
+import { useLiveMatches } from "@/hooks/useMatches";
+import { LoadingSpinner, ErrorState } from "@/components/common/StateComponents";
 
 const sports = [
   {
@@ -52,10 +28,28 @@ const sports = [
 ];
 
 export default function Index() {
+  // Obtener datos con hooks
+  const { data: tournaments, isLoading: tournamentsLoading, error: tournamentsError } = usePublicTournaments();
+  const { data: liveMatches, isLoading: matchesLoading, error: matchesError } = useLiveMatches();
+
+  // Mostrar loading global si ambos están cargando
+  if (tournamentsLoading && matchesLoading) {
+    return <LoadingSpinner />;
+  }
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="relative h-80vh md:h-screen bg-gradient-to-r from-primary via-secondary to-primary overflow-hidden">
+      <section className="relative h-[70vh] md:h-screen bg-gradient-to-r from-primary via-secondary to-primary overflow-hidden animate-gradient-x">
+        <style>{`
+          @keyframes gradient-x {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+          }
+          .animate-gradient-x {
+            background-size: 200% 200%;
+            animation: gradient-x 15s ease infinite;
+          }
+        `}</style>
         <div className="absolute inset-0 opacity-20">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22none%22 stroke=%22white%22 stroke-width=%220.5%22 opacity=%220.1%22/></svg>')] bg-repeat"></div>
         </div>
@@ -93,7 +87,7 @@ export default function Index() {
             <p className="flex items-center gap-2">
               <span className="inline-block w-3 h-3 bg-destructive rounded-full animate-pulse"></span>
               <span className="font-semibold">
-                {liveMatches.length} partidos en vivo ahora
+                {liveMatches?.length || 0} partidos en vivo ahora
               </span>
             </p>
           </div>
@@ -101,14 +95,23 @@ export default function Index() {
       </section>
 
       {/* Ongoing Tournaments Section - Región Común */}
-      <section className="py-20 bg-white border-t-4 border-primary">
+      <section className="py-10 bg-white border-t-4 border-primary">
         <div className="container mx-auto px-4">
           {/* Section Header - Proximidad y Continuidad */}
-          <div className="mb-16 max-w-3xl">
+          <div className="mb-8 max-w-3xl animate-fade-in-up">
+            <style>{`
+              @keyframes fade-in-up {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              .animate-fade-in-up {
+                animation: fade-in-up 0.6s ease-out;
+              }
+            `}</style>
             <div className="flex items-start gap-4">
-              <div className="w-1.5 h-14 bg-gradient-to-b from-primary to-primary/50 rounded-full flex-shrink-0"></div>
+              <div className="w-1.5 h-12 bg-gradient-to-b from-primary to-primary/50 rounded-full flex-shrink-0"></div>
               <div>
-                <h2 className="text-4xl font-bold text-foreground leading-tight">
+                <h2 className="text-2xl font-bold text-foreground leading-tight">
                   Torneos en Curso
                 </h2>
                 <p className="text-base text-muted-foreground mt-3 font-medium">
@@ -119,91 +122,103 @@ export default function Index() {
           </div>
 
           {/* Tournaments Grid - Similitud y Simetría */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            {[
-              {
-                id: 1,
-                slug: "interfacultades-2026",
-                title: "INTERFACULTADES 2026",
-                status: "En Progreso",
-                description:
-                  "La competencia deportiva más importante de la UNAS. Todas las facultades compitiendo por la gloria.",
-                daysLeft: 18,
-                totalTeams: 42,
-                progress: 65,
-                color: "primary",
-              },
-            ].map((tournament) => (
-              <div
-                key={tournament.id}
-                className="bg-white rounded-3xl p-8 shadow-sm border border-border hover:shadow-xl transition-all group"
-              >
-                <div className="flex justify-between items-start mb-6">
-                  <div
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                      tournament.id === 1
-                        ? "bg-primary-100 text-primary"
-                        : "bg-accent-100 text-accent"
-                    }`}
-                  >
-                    {tournament.status}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-3xl font-bold text-foreground">
-                      Faltan {tournament.daysLeft}
-                    </p>
-                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">
-                      Días para la final
-                    </p>
-                  </div>
-                </div>
-
-                <h3 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">
-                  {tournament.title}
-                </h3>
-                <p className="text-muted-foreground mb-8 line-clamp-2">
-                  {tournament.description}
-                </p>
-
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="font-bold text-foreground">
-                        Progreso del Torneo
-                      </span>
-                      <span className="text-muted-foreground">
-                        {tournament.progress}%
-                      </span>
-                    </div>
-                    <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-1000 ${
-                          tournament.id === 1 ? "bg-primary" : "bg-accent"
-                        }`}
-                        style={{ width: `${tournament.progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-border mb-6">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-5 h-5 text-muted-foreground" />
-                      <span className="font-bold">
-                        {tournament.totalTeams} Facultades
-                      </span>
-                    </div>
-                  </div>
-
-                  <Link
-                    to={`/torneo/${tournament.slug}`}
-                    className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 text-sm"
-                  >
-                    <Users className="w-4 h-4" />
-                    VER DETALLES
-                  </Link>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {tournamentsLoading ? (
+              <div className="col-span-2 flex justify-center">
+                <LoadingSpinner />
               </div>
-            ))}
+            ) : tournamentsError ? (
+              <div className="col-span-2">
+                <ErrorState
+                  title="Error al cargar torneos"
+                  onRetry={() => window.location.reload()}
+                />
+              </div>
+            ) : tournaments && tournaments.length > 0 ? (
+              tournaments.slice(0, 6).map((tournament, index) => {
+                // Calcular días hasta la final
+                const daysLeft = tournament.endDate
+                  ? Math.ceil((new Date(tournament.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  : 0;
+
+                // Calcular progreso aproximado
+                const progress = tournament.startDate && tournament.endDate
+                  ? Math.min(100, Math.max(0, 
+                      ((Date.now() - new Date(tournament.startDate).getTime()) / 
+                       (new Date(tournament.endDate).getTime() - new Date(tournament.startDate).getTime())) * 100
+                    ))
+                  : 0;
+
+                return (
+                  <div
+                    key={tournament.id}
+                    className="bg-white rounded-2xl p-6 shadow-sm border border-border hover:shadow-2xl hover:scale-105 hover:-translate-y-2 transition-all duration-300 group"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-100 text-primary animate-pulse">
+                        {tournament.state}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-foreground">
+                          {daysLeft > 0 ? `Faltan ${daysLeft}` : 'Finalizado'}
+                        </p>
+                        <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">
+                          {daysLeft > 0 ? 'Días para la final' : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <h3 className="text-lg font-bold mb-2 group-hover:text-primary transition-colors">
+                      {tournament.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {tournament.description || 'Torneo deportivo universitario'}
+                    </p>
+
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between text-xs mb-1.5">
+                          <span className="font-bold text-foreground">
+                            Progreso del Torneo
+                          </span>
+                          <span className="text-muted-foreground">
+                            {Math.round(progress)}%
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-primary to-secondary"
+                            style={{ width: `${progress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-bold">
+                            {tournament.maxTeams || 'N/A'} Equipos
+                          </span>
+                        </div>
+                      </div>
+
+                      <Link
+                        to={`/torneo/${tournament.slug}`}
+                        className="w-full py-2 mt-3 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary-700 hover:scale-105 transition-all flex items-center justify-center gap-2 text-xs"
+                      >
+                        <Users className="w-4 h-4" />
+                        VER DETALLES
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="col-span-2 text-center py-12">
+                <p className="text-muted-foreground">No hay torneos en curso actualmente</p>
+              </div>
+            )}
           </div>
 
           <div className="text-center mt-8">
@@ -218,14 +233,14 @@ export default function Index() {
       </section>
 
       {/* Live Matches Section - Región Común y Similitud */}
-      <section className="py-20 bg-gradient-to-b from-white via-white to-primary-50 border-t-4 border-secondary">
+      <section className="py-10 bg-gradient-to-b from-white via-white to-primary-50 border-t-4 border-secondary">
         <div className="container mx-auto px-4">
           {/* Section Header - Proximidad y Continuidad */}
-          <div className="mb-16 max-w-3xl">
+          <div className="mb-8 max-w-3xl animate-fade-in-up">
             <div className="flex items-start gap-4">
-              <div className="w-1.5 h-14 bg-gradient-to-b from-secondary to-secondary/50 rounded-full flex-shrink-0"></div>
+              <div className="w-1.5 h-12 bg-gradient-to-b from-secondary to-secondary/50 rounded-full flex-shrink-0"></div>
               <div>
-                <h2 className="text-4xl font-bold text-foreground leading-tight">
+                <h2 className="text-2xl font-bold text-foreground leading-tight">
                   Partidos Hoy
                 </h2>
                 <p className="text-base text-muted-foreground mt-3 font-medium">
@@ -236,74 +251,94 @@ export default function Index() {
           </div>
 
           {/* Matches Grid - Similitud de estilo */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {liveMatches.slice(0, 2).map((match) => (
-              <div
-                key={match.id}
-                className="group flex flex-col h-full bg-white border-2 border-secondary rounded-2xl overflow-hidden hover:shadow-2xl hover:border-secondary/80 transition-all duration-300 hover:-translate-y-1"
-              >
-                {/* Live Badge - Figura-Fondo claro */}
-                <div className="bg-gradient-to-r from-destructive via-destructive to-red-600 px-6 py-4 flex items-center justify-between text-white border-b-4 border-destructive/40">
-                  <div className="flex items-center gap-2.5">
-                    <span className="inline-block w-3 h-3 bg-white rounded-full animate-pulse"></span>
-                    <span className="font-bold text-sm tracking-wide">EN VIVO</span>
-                  </div>
-                  <span className="text-xs font-bold bg-white/20 px-3 py-1.5 rounded-full">{match.sport}</span>
-                </div>
-
-                {/* Score Section - Simetría y Continuidad */}
-                <div className="flex-1 p-8 text-center flex flex-col justify-center">
-                  <div className="grid grid-cols-3 gap-4 items-center mb-6">
-                    {/* Home Team */}
-                    <div className="space-y-2">
-                      <p className="text-sm font-bold text-foreground/80 uppercase tracking-tight">
-                        {match.home}
-                      </p>
-                      <p className="text-5xl font-black text-primary">
-                        {match.homeScore}
-                      </p>
-                    </div>
-
-                    {/* Separator - Conectividad visual */}
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-1 h-12 bg-gradient-to-b from-primary via-primary to-transparent rounded-full"></div>
-                      <span className="text-2xl font-light text-muted-foreground/40 mt-1">-</span>
-                    </div>
-
-                    {/* Away Team */}
-                    <div className="space-y-2">
-                      <p className="text-sm font-bold text-foreground/80 uppercase tracking-tight">
-                        {match.away}
-                      </p>
-                      <p className="text-5xl font-black text-secondary">
-                        {match.awayScore}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Match Info - Región Común */}
-                  <div className="border-t-2 border-dashed border-primary/20 pt-4 mt-4 space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      📍 {match.location}
-                    </p>
-                    <p className="text-xs text-muted-foreground/70">
-                      {match.time}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action Button */}
-                <div className="px-6 pb-6">
-                  <Link
-                    to={`/partidos/${match.id}`}
-                    className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 text-sm"
-                  >
-                    <Play className="w-4 h-4" />
-                    VER DETALLES
-                  </Link>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+            {matchesLoading ? (
+              <div className="col-span-3 flex justify-center">
+                <LoadingSpinner />
               </div>
-            ))}
+            ) : matchesError ? (
+              <div className="col-span-3">
+                <ErrorState
+                  title="Error al cargar partidos"
+                  onRetry={() => window.location.reload()}
+                />
+              </div>
+            ) : liveMatches && liveMatches.length > 0 ? (
+              liveMatches.slice(0, 9).map((match, index) => (
+                <div
+                  key={match.id}
+                  className="group flex flex-col h-full bg-white border-2 border-secondary rounded-xl overflow-hidden hover:shadow-2xl hover:border-secondary/80 hover:scale-105 transition-all duration-300"
+                  style={{ animationDelay: `${index * 0.08}s` }}
+                >
+                  {/* Live Badge - Figura-Fondo claro */}
+                  <div className="bg-gradient-to-r from-destructive via-destructive to-red-600 px-4 py-3 flex items-center justify-between text-white border-b-4 border-destructive/40 animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 bg-white rounded-full animate-ping"></span>
+                      <span className="font-bold text-xs tracking-wide">EN VIVO</span>
+                    </div>
+                    <span className="text-xs font-bold bg-white/20 px-2 py-1 rounded-full">{match.sport}</span>
+                  </div>
+
+                  {/* Score Section - Simetría y Continuidad */}
+                  <div className="flex-1 p-5 text-center flex flex-col justify-center">
+                    <div className="grid grid-cols-3 gap-3 items-center mb-4">
+                      {/* Home Team */}
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-foreground/80 uppercase tracking-tight">
+                          {match.home}
+                        </p>
+                        <p className="text-3xl font-black text-primary group-hover:scale-110 transition-transform">
+                          {match.homeScore}
+                        </p>
+                      </div>
+
+                      {/* Separator - Conectividad visual */}
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="w-0.5 h-8 bg-gradient-to-b from-primary via-primary to-transparent rounded-full"></div>
+                        <span className="text-xl font-light text-muted-foreground/40">-</span>
+                      </div>
+
+                      {/* Away Team */}
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-foreground/80 uppercase tracking-tight">
+                          {match.away}
+                        </p>
+                        <p className="text-3xl font-black text-secondary group-hover:scale-110 transition-transform">
+                          {match.awayScore}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Match Info - Región Común */}
+                    <div className="border-t border-dashed border-primary/20 pt-2 mt-2 space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        📍 {match.location}
+                      </p>
+                      {match.time && (
+                        <p className="text-xs text-muted-foreground/70">
+                          {match.time}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="px-4 pb-4">
+                    <Link
+                      to={`/partidos/${match.id}`}
+                      className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary-700 hover:scale-105 transition-all flex items-center justify-center gap-2 text-xs"
+                    >
+                      <Play className="w-4 h-4" />
+                      VER DETALLES
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12">
+                <p className="text-muted-foreground">No hay partidos en vivo en este momento</p>
+              </div>
+            )}
           </div>
 
           <div className="text-center mt-8">
@@ -318,14 +353,14 @@ export default function Index() {
       </section>
 
       {/* Latest News Section - Región Común y Similitud */}
-      <section className="py-20 bg-white border-t-4 border-accent">
+      <section className="py-10 bg-white border-t-4 border-accent">
         <div className="container mx-auto px-4">
           {/* Section Header */}
-          <div className="mb-16 max-w-3xl">
+          <div className="mb-8 max-w-3xl animate-fade-in-up">
             <div className="flex items-start gap-4">
-              <div className="w-1.5 h-14 bg-gradient-to-b from-accent to-accent/50 rounded-full flex-shrink-0"></div>
+              <div className="w-1.5 h-12 bg-gradient-to-b from-accent to-accent/50 rounded-full flex-shrink-0"></div>
               <div>
-                <h2 className="text-4xl font-bold text-foreground leading-tight">
+                <h2 className="text-2xl font-bold text-foreground leading-tight">
                   Últimas Noticias
                 </h2>
                 <p className="text-base text-muted-foreground mt-3 font-medium">
@@ -336,7 +371,7 @@ export default function Index() {
           </div>
 
           {/* News Grid - Similitud de estilos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
             {[
               {
                 id: 1,
@@ -345,25 +380,61 @@ export default function Index() {
                 date: "Hoy",
                 image: "bg-gradient-to-br from-green-500 to-green-600",
               },
-            ].map((news) => (
+              {
+                id: 2,
+                title: "Cachimbos 2026: Inscripciones Abiertas",
+                category: "Inscripciones",
+                date: "Hace 2h",
+                image: "bg-gradient-to-br from-blue-500 to-blue-600",
+              },
+              {
+                id: 3,
+                title: "Final de Fútbol: Agronomía vs Ingeniería",
+                category: "Resultados",
+                date: "Hace 5h",
+                image: "bg-gradient-to-br from-orange-500 to-red-600",
+              },
+              {
+                id: 4,
+                title: "Nuevo Récord en Vóley Femenino",
+                category: "Destacado",
+                date: "Ayer",
+                image: "bg-gradient-to-br from-yellow-500 to-orange-500",
+              },
+              {
+                id: 5,
+                title: "Entrevista: Capitán del Equipo Campeón",
+                category: "Entrevistas",
+                date: "Hace 1 día",
+                image: "bg-gradient-to-br from-purple-500 to-pink-500",
+              },
+              {
+                id: 6,
+                title: "Calendario Actualizado de Partidos",
+                category: "Anuncios",
+                date: "Hace 2 días",
+                image: "bg-gradient-to-br from-teal-500 to-cyan-500",
+              },
+            ].map((news, index) => (
               <div
                 key={news.id}
-                className="bg-white rounded-xl border border-border overflow-hidden hover:shadow-xl transition-all"
+                className="bg-white rounded-xl border border-border overflow-hidden hover:shadow-xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 group"
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className={`h-32 ${news.image}`}></div>
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-xs font-bold text-primary bg-primary-100 px-3 py-1 rounded-full">
+                <div className={`h-28 ${news.image} group-hover:scale-105 transition-transform duration-300`}></div>
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-bold text-primary bg-primary-100 px-2 py-0.5 rounded-full">
                       {news.category}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {news.date}
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-foreground mb-4 line-clamp-2">
+                  <h3 className="text-sm font-bold text-foreground mb-3 line-clamp-2 group-hover:text-primary transition-colors">
                     {news.title}
                   </h3>
-                  <button className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary-700 transition-colors text-sm">
+                  <button className="w-full py-1.5 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary-700 hover:scale-105 transition-all text-xs">
                     VER DETALLES
                   </button>
                 </div>
@@ -380,14 +451,14 @@ export default function Index() {
       </section>
 
       {/* Sports Categories Information - Similitud y Simetría */}
-      <section className="py-20 bg-gradient-to-b from-primary-50 to-white border-t-4 border-primary/20" id="disciplines">
+      <section className="py-10 bg-gradient-to-b from-primary-50 to-white border-t-4 border-primary/20" id="disciplines">
         <div className="container mx-auto px-4">
           {/* Section Header */}
-          <div className="mb-16 max-w-3xl">
+          <div className="mb-8 max-w-3xl animate-fade-in-up">
             <div className="flex items-start gap-4">
-              <div className="w-1.5 h-14 bg-gradient-to-b from-primary to-primary/50 rounded-full flex-shrink-0"></div>
+              <div className="w-1.5 h-12 bg-gradient-to-b from-primary to-primary/50 rounded-full flex-shrink-0"></div>
               <div>
-                <h2 className="text-4xl font-bold text-foreground leading-tight">
+                <h2 className="text-2xl font-bold text-foreground leading-tight">
                   Disciplinas Deportivas
                 </h2>
                 <p className="text-base text-muted-foreground mt-3 font-medium max-w-2xl">
@@ -400,7 +471,7 @@ export default function Index() {
           </div>
 
           {/* Disciplines Grid - Similitud uniforme */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {sports.map((sport) => {
               const descriptions: Record<string, string> = {
                 Fútbol:
@@ -412,10 +483,10 @@ export default function Index() {
               return (
                 <div
                   key={sport.name}
-                  className="group flex flex-col h-full bg-white rounded-2xl border-2 border-border hover:border-primary/50 p-8 text-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                  className="group flex flex-col h-full bg-white rounded-xl border-2 border-border hover:border-primary/50 p-6 text-center hover:shadow-xl hover:scale-105 hover:-translate-y-2 transition-all duration-300 cursor-pointer"
                 >
                   {/* Icon area */}
-                  <div className="mb-4 h-12 flex items-center justify-center text-2xl">
+                  <div className="mb-3 h-10 flex items-center justify-center text-3xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-300">
                     {sport.name === "Fútbol" && "⚽"}
                     {sport.name === "Vóley" && "🏐"}
                     {sport.name === "Básquet" && "🏀"}
@@ -423,21 +494,21 @@ export default function Index() {
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">
+                  <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
                     {sport.name}
                   </h3>
 
                   {/* Description */}
-                  <p className="text-muted-foreground text-sm mb-6 flex-1">
+                  <p className="text-muted-foreground text-xs mb-4 flex-1">
                     {descriptions[sport.name] ||
                       "Información de este deporte disponible en la plataforma."}
                   </p>
 
                   {/* Footer separator */}
-                  <div className="w-12 h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent rounded-full mx-auto mb-4"></div>
+                  <div className="w-10 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent rounded-full mx-auto mb-3 group-hover:w-full group-hover:via-primary transition-all"></div>
 
                   {/* CTA */}
-                  <p className="text-xs text-primary font-bold uppercase tracking-wide">
+                  <p className="text-xs text-primary font-bold uppercase tracking-wide group-hover:scale-110 transition-transform">
                     Ver disciplinas
                   </p>
                 </div>

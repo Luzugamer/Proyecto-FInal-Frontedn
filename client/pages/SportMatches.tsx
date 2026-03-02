@@ -271,9 +271,9 @@ export default function SportMatches() {
         {/* Sport Header */}
         <div className={`bg-gradient-to-r ${sport.color} rounded-xl p-12 mb-12 text-white`}>
           <div className="flex items-center gap-6 mb-6">
-            <span className="text-7xl">{sport.emoji}</span>
+            <span className="text-5xl">{sport.emoji}</span>
             <div>
-              <h1 className="text-5xl font-bold">{sport.name}</h1>
+              <h1 className="text-3xl font-bold">{sport.name}</h1>
               <p className="text-lg text-white/80">{sport.description}</p>
             </div>
           </div>

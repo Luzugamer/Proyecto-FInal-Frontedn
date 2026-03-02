@@ -72,7 +72,7 @@ export default function NewsPage() {
       <section className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-b border-border py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold text-foreground mb-3">
+            <h1 className="text-3xl font-bold text-foreground mb-3">
               Portal de Noticias
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

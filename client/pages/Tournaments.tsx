@@ -11,12 +11,14 @@ import {
   Filter,
 } from "lucide-react";
 import {
-  mockTournaments,
   getTournamentTypeEmoji,
   TournamentType,
 } from "@/lib/mockTournaments";
 import { useAuth } from "@/hooks/useAuth";
+import { useTournaments } from "@/hooks/useTournaments";
+import { LoadingSpinner, ErrorState } from "@/components/common/StateComponents";
 import CreateTournamentModal from "@/components/tournament/modals/CreateTournamentModal";
+import type { TournamentState } from "@/schemas/tournament.schema";
 
 export default function Tournaments() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -33,6 +35,9 @@ export default function Tournaments() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Obtener torneos con el hook
+  const { data: allTournaments, isLoading, error } = useTournaments();
+
   // Verificar si el usuario tiene rol de Administrador o Super Administrador
   const isAdmin =
     user?.rol && ["ADMINISTRADOR", "SUPER_ADMIN"].includes(user.rol);
@@ -42,42 +47,75 @@ export default function Tournaments() {
     setSearchParams({ tab });
   };
 
-  // Obtener arrays únicos para filtros
-  // Simplificar disciplinas a solo base (Futsal, Fútbol, Voley, Basquet)
+  // Obtener arrays únicos para filtros desde los datos reales
   const disciplines = ["Futsal", "Fútbol", "Voley", "Básquet"];
 
-  const types = Array.from(new Set(mockTournaments.map((t) => t.tipo)));
+  const types = useMemo(() => {
+    if (!allTournaments) return [];
+    return Array.from(new Set(allTournaments.map((t) => t.tournamentType)));
+  }, [allTournaments]);
 
-  const years = Array.from(
-    new Set(mockTournaments.map((t) => t.fechaCompetenciaInicio.slice(0, 4))),
-  ).sort((a, b) => b.localeCompare(a));
+  const years = useMemo(() => {
+    if (!allTournaments) return [];
+    return Array.from(
+      new Set(allTournaments.map((t) => t.startDate?.slice(0, 4) || "")),
+    ).filter(Boolean).sort((a, b) => b.localeCompare(a));
+  }, [allTournaments]);
 
   const filteredTournaments = useMemo(() => {
-    return mockTournaments.filter((tournament) => {
-      const statusMatch =
-        (activeTab === "activos" && tournament.estado === "en_curso") ||
-        (activeTab === "proximos" && tournament.estado === "inscripciones") ||
-        (activeTab === "finalizados" && tournament.estado === "finalizado");
+    if (!allTournaments) return [];
+    
+    return allTournaments.filter((tournament) => {
+      // Mapear tab a estado del schema
+      const stateMap: Record<string, TournamentState[]> = {
+        activos: ['active', 'in_progress'],
+        proximos: ['scheduled', 'registration_open'],
+        finalizados: ['completed', 'cancelled']
+      };
+
+      const statusMatch = stateMap[activeTab]?.includes(tournament.state);
 
       const disciplineMatch =
         !selectedDiscipline ||
-        tournament.disciplinas.some((d) => d.includes(selectedDiscipline));
+        tournament.sports?.some((s) => s.includes(selectedDiscipline));
 
-      const typeMatch = !selectedType || tournament.tipo === selectedType;
+      const typeMatch = !selectedType || tournament.tournamentType === selectedType;
 
       const yearMatch =
         !selectedYear ||
-        tournament.fechaCompetenciaInicio.startsWith(selectedYear);
+        tournament.startDate?.startsWith(selectedYear);
 
       const textMatch =
         !searchText ||
-        tournament.nombre.toLowerCase().includes(searchText.toLowerCase());
+        tournament.name.toLowerCase().includes(searchText.toLowerCase());
 
       return (
         statusMatch && disciplineMatch && typeMatch && yearMatch && textMatch
       );
     });
-  }, [activeTab, selectedDiscipline, selectedType, selectedYear, searchText]);
+  }, [allTournaments, activeTab, selectedDiscipline, selectedType, selectedYear, searchText]);
+
+  // Estado de loading
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  // Estado de error
+  if (error) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center p-4">
+        <ErrorState
+          title="Error al cargar torneos"
+          message="No se pudieron cargar los torneos. Por favor, intenta de nuevo."
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-gradient-to-b from-primary-50 to-white min-h-screen py-12">
@@ -109,9 +147,9 @@ export default function Tournaments() {
         {/* Header - Proximidad y Continuidad */}
         <div className="mb-16">
           <div className="flex items-start gap-4">
-            <div className="w-1.5 h-16 bg-gradient-to-b from-primary via-primary to-primary/50 rounded-full flex-shrink-0"></div>
+            <div className="w-1.5 h-12 bg-gradient-to-b from-primary to-primary/50 rounded-full flex-shrink-0"></div>
             <div>
-              <h1 className="text-5xl font-bold text-foreground mb-3 leading-tight">
+              <h1 className="text-3xl font-bold text-foreground mb-3 leading-tight">
                 Torneos Deportivos
               </h1>
               <p className="text-base text-muted-foreground font-medium max-w-2xl">
@@ -390,16 +428,16 @@ export default function Tournaments() {
                   <div className="flex items-start justify-between mb-4">
                     <span className="text-5xl opacity-90 group-hover:opacity-100 transition-opacity">
                       {getTournamentTypeEmoji(
-                        tournament.tipo.toLowerCase() as TournamentType,
+                        tournament.tournamentType?.toLowerCase() as TournamentType,
                       )}
                     </span>
-                    {tournament.estado === "en_curso" && (
+                    {(tournament.state === 'active' || tournament.state === 'in_progress') && (
                       <span className="inline-flex items-center gap-1 bg-destructive text-white px-3 py-1 rounded-full text-xs font-bold">
                         <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse"></span>
                         EN CURSO
                       </span>
                     )}
-                    {tournament.estado === "inscripciones" && (
+                    {tournament.state === 'scheduled' && (
                       <span className="inline-flex items-center gap-1 bg-secondary text-white px-3 py-1 rounded-full text-xs font-bold">
                         INSCRIPCIONES
                       </span>
@@ -411,10 +449,10 @@ export default function Tournaments() {
                     )}
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-2">
-                    {tournament.nombre}
+                    {tournament.name}
                   </h3>
                   <p className="text-sm text-muted-foreground capitalize">
-                    {tournament.tipo}
+                    {tournament.tournamentType}
                   </p>
                 </div>
 
@@ -422,20 +460,20 @@ export default function Tournaments() {
                 <div className="p-6 flex-1 flex flex-col">
                   {/* Title and Type */}
                   <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-2">
-                    {tournament.nombre}
+                    {tournament.name}
                   </h3>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4 capitalize">
-                    {tournament.tipo}
+                    {tournament.tournamentType}
                   </p>
 
                   {/* Description */}
                   <p className="text-sm text-muted-foreground mb-5 line-clamp-2 flex-1">
-                    {tournament.descripcion}
+                    {tournament.description || 'Torneo deportivo universitario'}
                   </p>
 
                   {/* Disciplines - Similitud visual */}
                   <div className="flex flex-wrap gap-2 mb-5 pb-5 border-b-2 border-dashed border-primary/20">
-                    {tournament.disciplinas.slice(0, 3).map((d) => (
+                    {tournament.sports?.slice(0, 3).map((d) => (
                       <span
                         key={d}
                         className="text-xs font-bold bg-primary-100 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors"
@@ -443,9 +481,9 @@ export default function Tournaments() {
                         {d}
                       </span>
                     ))}
-                    {tournament.disciplinas.length > 3 && (
+                    {tournament.sports && tournament.sports.length > 3 && (
                       <span className="text-xs font-bold text-muted-foreground px-3 py-1.5">
-                        +{tournament.disciplinas.length - 3}
+                        +{tournament.sports.length - 3}
                       </span>
                     )}
                   </div>
@@ -460,7 +498,7 @@ export default function Tournaments() {
                             Disciplinas
                           </p>
                           <p className="font-bold">
-                            {tournament.disciplinas.length}
+                            {tournament.sports?.length || 0}
                           </p>
                         </div>
                       </div>
@@ -472,7 +510,7 @@ export default function Tournaments() {
                           <p className="text-xs text-muted-foreground">
                             Equipos
                           </p>
-                          <p className="font-bold">{tournament.totalEquipos}</p>
+                          <p className="font-bold">{tournament.maxTeams || 'N/A'}</p>
                         </div>
                       </div>
                     </div>
@@ -481,14 +519,15 @@ export default function Tournaments() {
                         <Zap className="w-5 h-5 text-accent flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                           <p className="text-xs text-muted-foreground font-semibold uppercase tracking-tight mb-0.5">
-                            {tournament.estado === "finalizado" && "Estado"}
-                            {tournament.estado === "en_curso" && "Progreso"}
-                            {tournament.estado === "inscripciones" && "Registros"}
+                            {(tournament.state === "completed" || tournament.state === "cancelled") && "Estado"}
+                            {(tournament.state === "active" || tournament.state === "in_progress") && "Estado"}
+                            {(tournament.state === "scheduled" || tournament.state === "registration_open") && "Registros"}
                           </p>
                           <p className="font-bold text-foreground text-sm">
-                            {tournament.estado === "finalizado" && "Completado"}
-                            {tournament.estado === "en_curso" && `${tournament.partidosJugados} partidos`}
-                            {tournament.estado === "inscripciones" && "Abierto"}
+                            {tournament.state === "completed" && "Completado"}
+                            {tournament.state === "cancelled" && "Cancelado"}
+                            {(tournament.state === "active" || tournament.state === "in_progress") && "En Progreso"}
+                            {(tournament.state === "scheduled" || tournament.state === "registration_open") && "Abierto"}
                           </p>
                         </div>
                       </div>

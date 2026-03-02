@@ -1,12 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Download, Zap, Trophy, Users, Calendar as CalendarIcon, Grid3x3, List } from "lucide-react";
-import { mockTournaments } from "@/lib/mockTournaments";
+import { ChevronLeft, ChevronRight, Download, Zap, Trophy, Users, Calendar as CalendarIcon, Grid3x3, List, X } from "lucide-react";
+import { useTournaments } from "@/hooks/useTournaments";
+import { LoadingSpinner, ErrorState } from "@/components/common/StateComponents";
+import type { Tournament } from "@/schemas/tournament.schema";
 
 export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1));
   const [selectedSport, setSelectedSport] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Usar hook para obtener torneos
+  const { data: allTournaments, isLoading, error } = useTournaments();
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -16,15 +22,15 @@ export default function Calendar() {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
-  // Get unique sports
-  const sports = Array.from(
-    new Set(mockTournaments.flatMap((t) => t.disciplinas)),
-  ).sort();
+  // Get unique sports from tournaments
+  const sports = allTournaments 
+    ? Array.from(new Set(allTournaments.flatMap((t) => t.disciplinas || []))).sort()
+    : [];
 
-  const filteredTournaments = mockTournaments.filter((tournament) => {
+  const filteredTournaments = allTournaments?.filter((tournament) => {
     if (!selectedSport) return true;
-    return tournament.disciplinas.some(d => d.includes(selectedSport));
-  });
+    return tournament.disciplinas?.some(s => s.includes(selectedSport));
+  }) || [];
 
   const handlePrevMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
@@ -35,11 +41,13 @@ export default function Calendar() {
   };
 
   const handleDownloadPDF = () => {
+    if (!filteredTournaments.length) return;
+    
     const content = `CALENDARIO DE TORNEOS - ${currentMonth.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}\n\n`;
     const data = filteredTournaments
       .map(
         (t) =>
-          `${t.nombre} (${t.tipo}) - Del ${new Date(t.fechaCompetenciaInicio).toLocaleDateString("es-ES")} al ${new Date(t.fechaCompetenciaFin).toLocaleDateString("es-ES")}`
+          `${t.nombre} (${t.tipo}) - Del ${t.fechaCompetenciaInicio ? new Date(t.fechaCompetenciaInicio).toLocaleDateString("es-ES") : 'N/A'} al ${t.fechaCompetenciaFin ? new Date(t.fechaCompetenciaFin).toLocaleDateString("es-ES") : 'N/A'}`
       )
       .join("\n");
 
@@ -65,15 +73,55 @@ export default function Calendar() {
     Array.from({ length: daysInMonth }, (_, i) => i + 1)
   );
 
+  // Helper para obtener torneos de un día
+  const getTournamentsForDay = (day: number): Tournament[] => {
+    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return filteredTournaments.filter(t => {
+      if (!t.fechaCompetenciaInicio || !t.fechaCompetenciaFin) return false;
+      const startDate = new Date(t.fechaCompetenciaInicio).toISOString().split('T')[0];
+      const endDate = new Date(t.fechaCompetenciaFin).toISOString().split('T')[0];
+      return dateStr >= startDate && dateStr <= endDate;
+    });
+  };
+
+  // Estados de loading y error
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center p-4">
+        <ErrorState
+          title="Error al cargar torneos"
+          message="No se pudieron cargar los torneos para el calendario"
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
+
+  // Debug: verificar datos
+  console.log('Calendar Debug:', { 
+    allTournaments: allTournaments?.length, 
+    filteredTournaments: filteredTournaments.length,
+    isLoading,
+    error 
+  });
+
   return (
     <div className="w-full bg-gradient-to-b from-primary-50 to-white min-h-screen py-12">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-16 max-w-3xl">
           <div className="flex items-start gap-4">
-            <div className="w-1.5 h-16 bg-gradient-to-b from-primary to-primary/50 rounded-full flex-shrink-0"></div>
+            <div className="w-1.5 h-12 bg-gradient-to-b from-primary to-primary/50 rounded-full flex-shrink-0"></div>
             <div>
-              <h1 className="text-5xl font-bold text-foreground leading-tight">Calendario de Torneos</h1>
+              <h1 className="text-3xl font-bold text-foreground leading-tight">Calendario de Torneos</h1>
               <p className="text-base text-muted-foreground mt-3 font-medium">
                 Visualiza todos los torneos programados
               </p>
@@ -140,29 +188,32 @@ export default function Calendar() {
 
         {/* SECTION 2: View Content - Grid or List */}
         {viewMode === "grid" && (
-        <section className="mb-16 bg-white rounded-2xl border-2 border-primary/20 p-8 hover:border-primary/50 transition-all">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
-              <CalendarIcon className="w-6 h-6 text-primary" />
-              Vista de Calendario
-            </h2>
+        <section className="mb-16">
+          {/* Layout de dos columnas en desktop */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Columna izquierda: Calendario */}
+            <div className="bg-white rounded-2xl border-2 border-primary/20 p-8 hover:border-primary/50 transition-all">
+              <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
+                <CalendarIcon className="w-6 h-6 text-primary" />
+                Vista de Calendario
+              </h2>
 
-            {/* Month Navigation */}
-            <div className="flex items-center justify-between mb-8 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl">
-              <button
-                onClick={handlePrevMonth}
-                className="p-2.5 hover:bg-primary/20 rounded-lg transition-colors text-primary font-bold"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <h3 className="text-2xl font-bold text-foreground capitalize text-center flex-1">{monthName}</h3>
-              <button
-                onClick={handleNextMonth}
-                className="p-2.5 hover:bg-primary/20 rounded-lg transition-colors text-primary font-bold"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
-            </div>
+              {/* Month Navigation */}
+              <div className="flex items-center justify-between mb-8 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl">
+                <button
+                  onClick={handlePrevMonth}
+                  className="p-2.5 hover:bg-primary/20 rounded-lg transition-colors text-primary font-bold"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <h3 className="text-2xl font-bold text-foreground capitalize text-center flex-1">{monthName}</h3>
+                <button
+                  onClick={handleNextMonth}
+                  className="p-2.5 hover:bg-primary/20 rounded-lg transition-colors text-primary font-bold"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </div>
 
             {/* Calendar Grid */}
             <div className="bg-white rounded-xl border-2 border-border p-6">
@@ -176,47 +227,175 @@ export default function Calendar() {
               </div>
 
               {/* Calendar Days */}
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 md:gap-2">
                 {calendarDays.map((day, idx) => {
-                  const dateStr = day ? `2026-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null;
-                  const tournamentsOnDay = dateStr ? filteredTournaments.filter(t => {
-                    const startDate = new Date(t.fechaCompetenciaInicio).toISOString().split('T')[0];
-                    const endDate = new Date(t.fechaCompetenciaFin).toISOString().split('T')[0];
-                    return dateStr >= startDate && dateStr <= endDate;
-                  }) : [];
+                  if (!day) {
+                    return (
+                      <div
+                        key={idx}
+                        className="aspect-square md:min-h-20 bg-muted/30 rounded-lg"
+                      />
+                    );
+                  }
+
+                  const tournamentsOnDay = getTournamentsForDay(day);
+                  const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                  const isSelected = selectedDate === dateStr;
+                  const hasEvents = tournamentsOnDay.length > 0;
 
                   return (
-                    <div
+                    <button
                       key={idx}
-                      className={`min-h-28 p-2 border-2 rounded-xl transition-all ${
-                        day === null
-                          ? "bg-muted/30 border-transparent"
-                          : "bg-white border-border hover:border-primary/50 hover:bg-primary/5"
+                      onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                      className={`aspect-square md:min-h-20 p-1.5 md:p-2 border-2 rounded-lg transition-all ${
+                        isSelected
+                          ? "bg-primary/10 border-primary ring-2 ring-primary/30"
+                          : hasEvents
+                          ? "bg-white border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
+                          : "bg-white border-border hover:bg-muted/20"
                       }`}
                     >
-                      {day && (
-                        <>
-                          <p className="font-bold text-foreground mb-2 text-sm">{day}</p>
-                          <div className="space-y-1">
-                            {tournamentsOnDay.map((tournament) => (
-                              <Link
-                                key={tournament.id}
-                                to={`/torneo/${tournament.slug}`}
-                                className="block text-xs bg-primary text-primary-foreground p-1.5 rounded-md hover:bg-primary-600 transition-colors truncate font-semibold"
-                                title={tournament.nombre}
-                              >
-                                {tournament.nombre.slice(0, 15)}...
-                              </Link>
-                            ))}
+                      <div className="h-full flex flex-col">
+                        <p className={`font-bold text-xs md:text-sm mb-1 ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                          {day}
+                        </p>
+                        
+                        {/* Indicadores de torneos - puntos de colores */}
+                        {hasEvents && (
+                          <div className="flex flex-wrap gap-0.5 md:gap-1 mt-auto">
+                            {tournamentsOnDay.slice(0, 6).map((tournament, i) => {
+                              // Colores según el estado
+                              const getColor = () => {
+                                if (tournament.estado === 'en_curso') return 'bg-destructive';
+                                if (tournament.estado === 'inscripciones') return 'bg-secondary';
+                                return 'bg-primary';
+                              };
+
+                              return (
+                                <div
+                                  key={tournament.id}
+                                  className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${getColor()}`}
+                                  title={tournament.nombre}
+                                />
+                              );
+                            })}
+                            {tournamentsOnDay.length > 6 && (
+                              <span className="text-[8px] md:text-[10px] font-bold text-muted-foreground">
+                                +{tournamentsOnDay.length - 6}
+                              </span>
+                            )}
                           </div>
-                        </>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    </button>
                   );
                 })}
               </div>
             </div>
           </div>
+
+          {/* Columna derecha: Detalles del día seleccionado y torneos */}
+          <div className="bg-white rounded-2xl border-2 border-primary/20 p-8 hover:border-primary/50 transition-all">
+            <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
+              <Trophy className="w-6 h-6 text-primary" />
+              Torneos
+            </h2>
+
+            {/* Panel de Detalles del Día Seleccionado */}
+            {selectedDate ? (
+              <div className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/30 rounded-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                    <CalendarIcon className="w-5 h-5 text-primary" />
+                    {new Date(selectedDate).toLocaleDateString("es-ES", { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </h3>
+                  <button
+                    onClick={() => setSelectedDate(null)}
+                    className="p-2 hover:bg-primary/20 rounded-lg transition-colors"
+                    aria-label="Cerrar detalles"
+                  >
+                    <X className="w-5 h-5 text-muted-foreground" />
+                  </button>
+                </div>
+
+                {(() => {
+                  const day = parseInt(selectedDate.split('-')[2]);
+                  const tournamentsOnDay = getTournamentsForDay(day);
+
+                  if (tournamentsOnDay.length === 0) {
+                    return (
+                      <p className="text-sm text-muted-foreground font-medium py-4 text-center">
+                        No hay torneos programados para este día
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3">
+                      {tournamentsOnDay.map((tournament) => (
+                        <Link
+                          key={tournament.id}
+                          to={`/torneo/${tournament.slug}`}
+                          className="block bg-white p-4 rounded-lg border-2 border-border hover:border-primary/50 transition-all hover:shadow-md group"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <h4 className="font-bold text-foreground mb-1 group-hover:text-primary transition-colors">
+                                {tournament.nombre}
+                              </h4>
+                              <p className="text-xs text-muted-foreground capitalize mb-2">
+                                {tournament.tipo}
+                              </p>
+                              {tournament.disciplinas && tournament.disciplinas.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {tournament.disciplinas.slice(0, 3).map((sport) => (
+                                    <span
+                                      key={sport}
+                                      className="text-xs font-semibold bg-primary-100 text-primary px-2 py-0.5 rounded"
+                                    >
+                                      {sport}
+                                    </span>
+                                  ))}
+                                  {tournament.disciplinas.length > 3 && (
+                                    <span className="text-xs text-muted-foreground">
+                                      +{tournament.disciplinas.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-shrink-0">
+                              {tournament.estado === 'en_curso' && (
+                                <span className="inline-flex items-center gap-1 bg-destructive text-white px-2 py-1 rounded-full text-xs font-bold">
+                                  <span className="inline-block w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                                  EN VIVO
+                                </span>
+                              )}
+                              {tournament.estado === 'inscripciones' && (
+                                <span className="bg-secondary text-white px-2 py-1 rounded-full text-xs font-bold">
+                                  INSCRIPCIONES
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground font-medium py-4 text-center">
+                Selecciona un día en el calendario para ver los torneos programados
+              </p>
+            )}
+          </div>
+        </div>
         </section>
         )}
 
@@ -232,8 +411,8 @@ export default function Calendar() {
           <div className="space-y-4">
             {filteredTournaments.length > 0 ? (
               filteredTournaments.map((tournament) => {
-                const startDate = new Date(tournament.fechaCompetenciaInicio);
-                const endDate = new Date(tournament.fechaCompetenciaFin);
+                const startDate = tournament.fechaCompetenciaInicio ? new Date(tournament.fechaCompetenciaInicio) : null;
+                const endDate = tournament.fechaCompetenciaFin ? new Date(tournament.fechaCompetenciaFin) : null;
 
                 return (
                   <Link
@@ -243,7 +422,7 @@ export default function Calendar() {
                   >
                     <div className="p-6 flex items-start gap-4 md:gap-6">
                       {/* Tournament Icon - Figura-Fondo */}
-                      <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-secondary/20 to-secondary/10 flex items-center justify-center text-3xl border-2 border-secondary/30 group-hover:border-secondary/50 transition-colors">
+                      <div className="flex-shrink-0 w-12 h-12 md:w-16 md:h-16 rounded-xl bg-gradient-to-br from-secondary/20 to-secondary/10 flex items-center justify-center text-2xl md:text-3xl border-2 border-secondary/30 group-hover:border-secondary/50 transition-colors">
                         {tournament.tipo === "olimpiada" && "🏆"}
                         {tournament.tipo === "copa" && "🏅"}
                         {tournament.tipo === "campeonato" && "⚽"}
@@ -254,27 +433,27 @@ export default function Calendar() {
                       <div className="flex-1">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
                           <div>
-                            <h3 className="text-lg font-bold text-foreground mb-1 group-hover:text-secondary transition-colors">
+                            <h3 className="text-base md:text-lg font-bold text-foreground mb-1 group-hover:text-secondary transition-colors">
                               {tournament.nombre}
                             </h3>
-                            <p className="text-sm text-muted-foreground capitalize font-medium">
+                            <p className="text-xs md:text-sm text-muted-foreground capitalize font-medium">
                               {tournament.tipo}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             {tournament.estado === "en_curso" && (
-                              <span className="inline-flex items-center gap-1 bg-destructive text-white px-3 py-1 rounded-full text-xs font-bold">
+                              <span className="inline-flex items-center gap-1 bg-destructive text-white px-2 md:px-3 py-1 rounded-full text-xs font-bold">
                                 <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse"></span>
                                 EN CURSO
                               </span>
                             )}
                             {tournament.estado === "inscripciones" && (
-                              <span className="inline-flex items-center gap-1 bg-secondary text-white px-3 py-1 rounded-full text-xs font-bold">
+                              <span className="inline-flex items-center gap-1 bg-secondary text-white px-2 md:px-3 py-1 rounded-full text-xs font-bold">
                                 INSCRIPCIONES
                               </span>
                             )}
                             {tournament.estado === "finalizado" && (
-                              <span className="inline-flex items-center gap-1 bg-muted-foreground text-white px-3 py-1 rounded-full text-xs font-bold">
+                              <span className="inline-flex items-center gap-1 bg-muted-foreground text-white px-2 md:px-3 py-1 rounded-full text-xs font-bold">
                                 FINALIZADO
                               </span>
                             )}
@@ -286,47 +465,49 @@ export default function Calendar() {
                           <div>
                             <p className="text-xs text-muted-foreground font-bold uppercase mb-1.5">Inicio</p>
                             <p className="font-semibold text-foreground text-sm">
-                              {startDate.toLocaleDateString("es-ES")}
+                              {startDate ? startDate.toLocaleDateString("es-ES") : 'N/A'}
                             </p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground font-bold uppercase mb-1.5">Fin</p>
                             <p className="font-semibold text-foreground text-sm">
-                              {endDate.toLocaleDateString("es-ES")}
+                              {endDate ? endDate.toLocaleDateString("es-ES") : 'N/A'}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <Trophy className="w-4 h-4 text-primary flex-shrink-0" />
                             <div>
                               <p className="text-xs text-muted-foreground font-bold uppercase mb-1">Disciplinas</p>
-                              <p className="font-bold text-foreground">{tournament.disciplinas.length}</p>
+                              <p className="font-bold text-foreground">{tournament.disciplinas?.length || 0}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Users className="w-4 h-4 text-secondary flex-shrink-0" />
                             <div>
                               <p className="text-xs text-muted-foreground font-bold uppercase mb-1">Equipos</p>
-                              <p className="font-bold text-foreground">{tournament.totalEquipos}</p>
+                              <p className="font-bold text-foreground">{tournament.totalEquipos || 'N/A'}</p>
                             </div>
                           </div>
                         </div>
 
                         {/* Disciplines - Similitud */}
-                        <div className="flex flex-wrap gap-2">
-                          {tournament.disciplinas.slice(0, 4).map((d) => (
-                            <span
-                              key={d}
-                              className="text-xs font-bold bg-secondary-100 text-secondary px-3 py-1.5 rounded-lg hover:bg-secondary/20 transition-colors"
-                            >
-                              {d}
-                            </span>
-                          ))}
-                          {tournament.disciplinas.length > 4 && (
-                            <span className="text-xs font-bold text-muted-foreground px-3 py-1.5">
-                              +{tournament.disciplinas.length - 4}
-                            </span>
-                          )}
-                        </div>
+                        {tournament.disciplinas && tournament.disciplinas.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {tournament.disciplinas.slice(0, 4).map((d) => (
+                              <span
+                                key={d}
+                                className="text-xs font-bold bg-secondary-100 text-secondary px-2 md:px-3 py-1 md:py-1.5 rounded-lg hover:bg-secondary/20 transition-colors"
+                              >
+                                {d}
+                              </span>
+                            ))}
+                            {tournament.disciplinas.length > 4 && (
+                              <span className="text-xs font-bold text-muted-foreground px-2 md:px-3 py-1 md:py-1.5">
+                                +{tournament.disciplinas.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Link>

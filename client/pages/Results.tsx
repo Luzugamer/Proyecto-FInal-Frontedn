@@ -160,7 +160,7 @@ export default function Results() {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-12">
-          <h1 className="text-5xl font-bold text-foreground mb-2">RESULTADOS</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">RESULTADOS</h1>
           <p className="text-lg text-muted-foreground">
             Revisa los resultados de todos los partidos finalizados
           </p>

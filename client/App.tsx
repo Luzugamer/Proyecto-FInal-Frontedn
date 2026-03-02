@@ -8,7 +8,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import Index from "./pages/Index";
+import SimpleIndex from "./pages/SimpleIndex";
+import MinimalTest from "./pages/MinimalTest";
 import Calendar from "./pages/Calendar";
+import CalendarCompact from "./pages/CalendarCompact";
+import Matches from "./pages/Matches";
+import TestMatches from "./pages/TestMatches";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetail from "./pages/TournamentDetail";
 import MatchDetailInTournament from "./pages/MatchDetailInTournament";
@@ -37,6 +42,8 @@ const App = () => (
         <Layout>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/partidos" element={<Matches />} />
+            <Route path="/test-partidos" element={<TestMatches />} />
             <Route path="/torneos" element={<Tournaments />} />
             <Route path="/torneo/:slug" element={<TournamentDetail />} />
             <Route
@@ -46,6 +53,7 @@ const App = () => (
             <Route path="/partidos/:id" element={<MatchDetail />} />
             <Route path="/deportes/:deporte" element={<SportMatches />} />
             <Route path="/calendario" element={<Calendar />} />
+            <Route path="/calendario-compacto" element={<CalendarCompact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/noticias" element={<News />} />
             <Route path="/noticia/:slug" element={<NewsDetail />} />
