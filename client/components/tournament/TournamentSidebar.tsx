@@ -1,7 +1,17 @@
 import { Tournament } from "@/lib/mockTournaments";
 import { getMatchesByTournament } from "@/lib/mockMatches";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Trophy, Calendar, Users } from "lucide-react";
+import { 
+  AlertCircle, 
+  Trophy, 
+  Calendar, 
+  Users, 
+  Info, 
+  BarChart3, 
+  Medal, 
+  Target,
+  ClipboardList 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface TournamentSidebarProps {
@@ -22,7 +32,10 @@ export function TournamentSidebar({
       {/* Widget de información general */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">ℹ️ Información</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Info className="w-5 h-5" />
+            Información
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div>
@@ -51,7 +64,10 @@ export function TournamentSidebar({
       {/* Widget de estadísticas */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">📊 Estadísticas</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" />
+            Estadísticas
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="flex justify-between">
@@ -129,7 +145,9 @@ export function TournamentSidebar({
               TOP FACULTAD
             </p>
             <div className="flex items-center gap-3">
-              <div className="text-2xl font-bold text-gold">🥇</div>
+              <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                <Medal className="w-6 h-6 text-yellow-600" />
+              </div>
               <div>
                 <p className="font-bold">{topTeam.nombre}</p>
                 <p className="text-sm text-muted-foreground">
@@ -144,7 +162,9 @@ export function TournamentSidebar({
               GOLEADOR
             </p>
             <div className="flex items-center gap-3">
-              <div className="text-2xl">⚽</div>
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <Target className="w-6 h-6 text-green-600" />
+              </div>
               <div>
                 <p className="font-bold text-sm">{topScorer.nombre}</p>
                 <p className="text-xs text-muted-foreground">
@@ -193,7 +213,10 @@ export function TournamentSidebar({
 
           <Card className="border-yellow-200 bg-yellow-50">
             <CardHeader>
-              <CardTitle className="text-lg">📋 Pendientes</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-yellow-600" />
+                Pendientes
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex items-start gap-2">

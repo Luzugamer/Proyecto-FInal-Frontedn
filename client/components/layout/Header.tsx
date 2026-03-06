@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
   X,
@@ -7,6 +7,11 @@ import {
   Settings,
   LayoutDashboard,
   ShieldCheck,
+  Home,
+  Trophy,
+  Newspaper,
+  Calendar,
+  Users as UsersIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,12 +30,13 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, isAuthenticated, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const baseLinks = [
-    { label: "Inicio", href: "/" },
-    { label: "Torneos", href: "/torneos" },
-    { label: "Noticias", href: "/noticias" },
-    { label: "Calendario", href: "/calendario" },
+    { label: "Inicio", href: "/", icon: Home },
+    { label: "Torneos", href: "/torneos", icon: Trophy },
+    { label: "Noticias", href: "/noticias", icon: Newspaper },
+    { label: "Calendario", href: "/calendario", icon: Calendar },
   ];
 
   const adminLinks = [
@@ -39,18 +45,21 @@ export default function Header() {
       href: "/dashboard/usuarios",
       roles: ["SUPER_ADMIN", "ADMINISTRADOR"],
       permission: "usuarios.ver",
+      icon: UsersIcon,
     },
     {
       label: "Noticias",
       href: "/dashboard/admin/noticias",
       roles: ["SUPER_ADMIN", "ADMINISTRADOR", "COMITE_ORGANIZADOR"],
       permission: "portal.gestionar",
+      icon: Newspaper,
     },
     {
       label: "Configuración",
       href: "/dashboard/configuracion",
       roles: ["SUPER_ADMIN"],
       permission: "configuracion.acceder",
+      icon: Settings,
     },
   ];
 
@@ -95,7 +104,7 @@ export default function Header() {
           className="flex items-center gap-3 font-bold text-lg text-primary hover:opacity-80 transition-opacity"
         >
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-lg">
-            🏆
+            <Trophy className="w-6 h-6" />
           </div>
           <span className="hidden sm:inline font-montserrat">SIGED</span>
         </Link>
@@ -194,85 +203,100 @@ export default function Header() {
           )}
         </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          className="md:hidden p-2 hover:bg-muted rounded-lg"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-label="Toggle menu"
-        >
-          {isMenuOpen ? (
-            <X className="w-6 h-6" />
+        {/* Mobile/Tablet User Avatar */}
+        <div className="md:hidden flex items-center">
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 hover:from-primary/30 hover:to-primary/20 p-0 overflow-hidden border-2 border-primary/30 hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md"
+                >
+                  <User className="h-5 w-5 text-primary font-bold" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
+                <DropdownMenuLabel className="font-bold">
+                  {user?.nombre} {user?.apellido}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-destructive focus:text-destructive cursor-pointer rounded-lg m-1 px-4 py-3 flex items-center gap-3 font-semibold"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>Cerrar Sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <Menu className="w-6 h-6" />
+            <Link
+              to="/login"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-700 transition-colors text-sm"
+            >
+              Ingresar
+            </Link>
           )}
-        </button>
+        </div>
       </nav>
 
-      {/* Mobile Navigation */}
-      {isMenuOpen && (
-        <div className="md:hidden border-t border-border bg-white animate-in slide-in-from-top duration-300">
-          <div className="container mx-auto px-4 py-4 space-y-3">
-            {isAuthenticated && (
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-xl mb-4">
-                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-bold text-sm">
-                    {user?.nombre} {user?.apellido}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {getRoleLabel(user?.rol as string)}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {allLinks.map((link) => (
+      {/* Bottom Navigation Bar - Mobile & Tablet Only */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border shadow-lg z-50">
+        <nav className="flex items-center justify-around px-2 py-3">
+          {baseLinks.map((link) => {
+            const Icon = link.icon;
+            const isActive = location.pathname === link.href;
+            return (
               <Link
                 key={link.href}
                 to={link.href}
-                className="block py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsMenuOpen(false)}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 py-2 px-3 rounded-lg transition-all duration-200",
+                  isActive
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                )}
               >
-                {link.label}
+                <Icon className={cn("w-6 h-6", isActive && "scale-110")} />
+                <span className="text-xs font-medium">{link.label}</span>
               </Link>
-            ))}
-
-            {filteredAdminLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="block py-2 text-sm font-bold text-primary hover:text-primary-700 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            {isAuthenticated ? (
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMenuOpen(false);
-                }}
-                className="w-full mt-4 px-4 py-2 bg-destructive/10 text-destructive rounded-lg font-bold hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Cerrar Sesión
-              </button>
-            ) : (
-              <Link
-                to="/login"
-                className="w-full mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-700 transition-colors block text-center"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Ingresar
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+            );
+          })}
+          
+          {/* Admin Menu Icon for authorized users */}
+          {filteredAdminLinks.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1 py-2 px-3 rounded-lg transition-all duration-200",
+                    "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                  )}
+                >
+                  <LayoutDashboard className="w-6 h-6" />
+                  <span className="text-xs font-medium">Admin</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg mb-2">
+                {filteredAdminLinks.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <DropdownMenuItem key={link.href} asChild>
+                      <Link
+                        to={link.href}
+                        className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span className="font-medium">{link.label}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </nav>
+      </div>
     </header>
   );
 }
