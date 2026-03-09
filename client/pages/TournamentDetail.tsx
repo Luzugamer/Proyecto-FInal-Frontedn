@@ -6,7 +6,6 @@ import { mockTournaments } from "@/lib/mockTournaments";
 import { TournamentHeader } from "@/components/tournament/TournamentHeader";
 import { TournamentAdminBar } from "@/components/tournament/TournamentAdminBar";
 import { TournamentTabs } from "@/components/tournament/TournamentTabs";
-import { TournamentSidebar } from "@/components/tournament/TournamentSidebar";
 import { RegistrarActaModal } from "@/components/tournament/modals/RegistrarActaModal";
 import { InscribirEquipoModal } from "@/components/tournament/modals/InscribirEquipoModal";
 
@@ -134,23 +133,13 @@ export default function TournamentDetailPage() {
 
       {/* Contenido Principal */}
       <main className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Contenido principal (70%) */}
-          <div className="lg:col-span-2">
-            <TournamentTabs
-              tournament={tournament}
-              userRole={user?.rol}
-              onGenererFixture={handleGenererFixture}
-              onRegistrarActa={handleRegistrarActa}
-              onEliminar={handleEliminar}
-            />
-          </div>
-
-          {/* Sidebar (30%) */}
-          <div>
-            <TournamentSidebar tournament={tournament} userRole={user?.rol} />
-          </div>
-        </div>
+        <TournamentTabs
+          tournament={tournament}
+          userRole={user?.rol}
+          onGenererFixture={handleGenererFixture}
+          onRegistrarActa={handleRegistrarActa}
+          onEliminar={handleEliminar}
+        />
       </main>
 
       {/* Modales */}

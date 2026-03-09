@@ -524,28 +524,6 @@ export default function Calendar() {
           </div>
         </section>
         )}
-
-        {/* Month Navigation for Reference */}
-        <div className="bg-white rounded-2xl border-2 border-border p-8">
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={handlePrevMonth}
-              className="p-2.5 hover:bg-primary-100 rounded-xl transition-colors text-primary font-bold"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <h2 className="text-2xl font-bold text-foreground capitalize text-center flex-1">{monthName}</h2>
-            <button
-              onClick={handleNextMonth}
-              className="p-2.5 hover:bg-primary-100 rounded-xl transition-colors text-primary font-bold"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          </div>
-          <p className="text-sm text-muted-foreground text-center font-medium">
-            Usa los botones para navegar entre meses y ver los torneos programados
-          </p>
-        </div>
       </div>
     </div>
   );

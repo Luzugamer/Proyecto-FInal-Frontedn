@@ -1,15 +1,15 @@
 import { useState, useMemo } from "react";
-import { Eye, Check, X, Mail, Filter, Search, Trophy, Dice5, FileDown, AlertTriangle, RefreshCw } from "lucide-react";
+import { Eye, Check, X, Filter, Search, Dice5, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -82,7 +82,7 @@ export function InscripcionesTab({
 
   const filteredInscripciones = useMemo(() => {
     return mockInscripciones.filter(ins => {
-      const matchSearch = ins.facultad.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      const matchSearch = ins.facultad.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           ins.disciplina.toLowerCase().includes(searchTerm.toLowerCase());
       const matchEstado = filterEstado === "todos" || ins.estado === filterEstado;
       return matchSearch && matchEstado;
@@ -101,20 +101,18 @@ export function InscripcionesTab({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header Administrativo */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border shadow-sm">
+      {/* ── Título estandarizado ──────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-primary flex items-center gap-2">
-            <Trophy className="w-5 h-5" />
-            Gestión de Inscripciones
-          </h2>
-          <p className="text-sm text-muted-foreground">Administración de equipos y sorteo de competencia</p>
+          <h2 className="text-xl font-bold text-foreground">✅ Inscripciones</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gestión de equipos inscritos y sorteo de competencia
+          </p>
         </div>
-        
         {canManage && (
-          <Button 
+          <Button
             onClick={() => setShowSorteoModal(true)}
-            className="bg-primary hover:bg-primary-700 gap-2 shadow-lg shadow-primary/20"
+            className="bg-primary hover:bg-primary-700 gap-2 shadow-lg shadow-primary/20 flex-shrink-0"
           >
             <Dice5 className="w-4 h-4" />
             Realizar Sorteo
@@ -126,8 +124,8 @@ export function InscripcionesTab({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar facultad o disciplina..." 
+          <Input
+            placeholder="Buscar facultad o disciplina..."
             className="pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -150,7 +148,7 @@ export function InscripcionesTab({
         </div>
       </div>
 
-      {/* Lista de inscripciones */}
+      {/* Lista */}
       <div className="grid grid-cols-1 gap-4">
         {filteredInscripciones.map((ins) => (
           <div
@@ -249,7 +247,7 @@ export function InscripcionesTab({
               Se ejecutará el algoritmo de sorteo aleatorio para la distribución de grupos y fixture de eliminación directa.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
             <p className="text-xs text-amber-700">
@@ -259,8 +257,8 @@ export function InscripcionesTab({
 
           <DialogFooter className="mt-6">
             <Button variant="outline" onClick={() => setShowSorteoModal(false)}>Cancelar</Button>
-            <Button 
-              onClick={handleSorteo} 
+            <Button
+              onClick={handleSorteo}
               disabled={isSorting}
               className="bg-primary hover:bg-primary-700 min-w-[140px]"
             >

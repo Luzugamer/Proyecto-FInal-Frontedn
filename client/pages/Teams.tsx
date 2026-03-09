@@ -9,8 +9,9 @@ import {
   Info,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { TeamRegistrationModal } from "@/components/tournament/modals/TeamRegistrationModal";
 
 interface Player {
   id: number;
@@ -105,6 +106,7 @@ const teams: Team[] = [
 
 export default function Teams() {
   const { user } = useAuth();
+  const [showTeamRegistration, setShowTeamRegistration] = useState(false);
 
   const filteredTeams = useMemo(() => {
     if (user?.rol === "DELEGADO_DEPORTES" && user.facultad) {
@@ -132,7 +134,10 @@ export default function Teams() {
             {(user?.rol === "SUPER_ADMIN" ||
               user?.rol === "ADMINISTRADOR" ||
               isDelegado) && (
-              <button className="flex items-center gap-2 px-6 py-3 bg-accent text-accent-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity self-start md:self-auto">
+              <button
+                onClick={() => setShowTeamRegistration(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-accent text-accent-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity self-start md:self-auto"
+              >
                 <Plus className="w-5 h-5" />
                 Nuevo Equipo
               </button>
@@ -307,6 +312,12 @@ export default function Teams() {
           </div>
         </div>
       </div>
+
+      {/* Team Registration Modal */}
+      <TeamRegistrationModal
+        open={showTeamRegistration}
+        onOpenChange={setShowTeamRegistration}
+      />
     </div>
   );
 }

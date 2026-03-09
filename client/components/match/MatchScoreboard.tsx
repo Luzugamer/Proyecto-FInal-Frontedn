@@ -31,16 +31,12 @@ export function MatchScoreboard({ match, isWinner }: MatchScoreboardProps) {
           className={`flex-1 text-center p-6 rounded-lg transition-all ${
             isWinner === "A"
               ? "ring-2 ring-primary bg-primary/10"
-              : "bg-white/50"
+              : ""
           }`}
         >
-          <div className="text-4xl mb-2">{match.equipoA.logo}</div>
-          <h2 className="text-lg font-bold text-foreground mb-1">
+          <h2 className="text-lg font-bold text-foreground mb-4">
             {match.equipoA.nombre}
           </h2>
-          <p className="text-xs text-muted-foreground mb-4">
-            {match.equipoA.facultad}
-          </p>
           <div className="text-5xl font-bold text-primary">
             {match.equipoA.goles}
           </div>
@@ -49,18 +45,6 @@ export function MatchScoreboard({ match, isWinner }: MatchScoreboardProps) {
         {/* Separador con estado */}
         <div className="flex flex-col items-center gap-2">
           <span className="text-2xl font-bold text-muted-foreground">-</span>
-          {match.estado === "en_vivo" && (
-            <Badge className="bg-red-500 animate-pulse gap-1">
-              <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              EN VIVO
-            </Badge>
-          )}
-          {match.estado === "finalizado" && (
-            <Badge variant="secondary">Finalizado</Badge>
-          )}
-          {match.estado === "por_jugar" && (
-            <Badge variant="outline">Por Jugar</Badge>
-          )}
         </div>
 
         {/* Equipo B */}
@@ -68,16 +52,12 @@ export function MatchScoreboard({ match, isWinner }: MatchScoreboardProps) {
           className={`flex-1 text-center p-6 rounded-lg transition-all ${
             isWinner === "B"
               ? "ring-2 ring-primary bg-primary/10"
-              : "bg-white/50"
+              : ""
           }`}
         >
-          <div className="text-4xl mb-2">{match.equipoB.logo}</div>
-          <h2 className="text-lg font-bold text-foreground mb-1">
+          <h2 className="text-lg font-bold text-foreground mb-4">
             {match.equipoB.nombre}
           </h2>
-          <p className="text-xs text-muted-foreground mb-4">
-            {match.equipoB.facultad}
-          </p>
           <div className="text-5xl font-bold text-primary">
             {match.equipoB.goles}
           </div>
