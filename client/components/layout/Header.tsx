@@ -1,12 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Menu,
-  X,
   User,
   LogOut,
   ShieldCheck,
 } from "lucide-react";
-import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +15,6 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, isAuthenticated, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
 
@@ -167,89 +163,45 @@ export default function Header() {
           )}
         </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          className="md:hidden p-2 hover:bg-muted rounded-lg"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-label="Toggle menu"
-        >
-          {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        {/* Mobile User Actions - Solo icono de usuario o login */}
+        <div className="md:hidden flex items-center">
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-2 hover:bg-muted rounded-lg">
+                  <User className="w-6 h-6" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-2 border-b border-border">
+                  <p className="font-medium text-sm">{user?.nombre} {user?.apellido}</p>
+                  <span
+                    className={cn(
+                      "inline-block mt-1 px-2 py-0.5 text-[10px] font-bold uppercase rounded border",
+                      getRoleBadgeColor(user?.rol as string)
+                    )}
+                  >
+                    {getRoleLabel(user?.rol as string)}
+                  </span>
+                </div>
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  <span>Cerrar Sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link
+              to="/login"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-700 transition-colors text-sm"
+            >
+              Ingresar
+            </Link>
+          )}
+        </div>
       </nav>
 
-      {/* Mobile Navigation */}
-      {isMenuOpen && (
-        <div className="md:hidden border-t border-border bg-white animate-in slide-in-from-top duration-300">
-          <div className="container mx-auto px-4 py-4 space-y-1">
-
-            {/* Info usuario */}
-            {isAuthenticated && (
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-xl mb-4">
-                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-bold text-sm">{user?.nombre} {user?.apellido}</p>
-                  <p className="text-xs text-muted-foreground">{getRoleLabel(user?.rol as string)}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Links públicos */}
-            {baseLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="block py-2.5 px-3 text-sm font-medium text-foreground hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            {/* Links admin */}
-            {filteredAdminLinks.length > 0 && (
-              <div className="pt-2 mt-2 border-t border-border space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3 pb-1">
-                  Administración
-                </p>
-                {filteredAdminLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    to={link.href}
-                    className="flex items-center gap-2 py-2.5 px-3 text-sm font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <ShieldCheck className="w-4 h-4" />
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {/* Logout / Login */}
-            <div className="pt-2 mt-2 border-t border-border">
-              {isAuthenticated ? (
-                <button
-                  onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                  className="w-full mt-2 px-4 py-2.5 bg-destructive/10 text-destructive rounded-lg font-bold hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Cerrar Sesión
-                </button>
-              ) : (
-                <Link
-                  to="/login"
-                  className="w-full mt-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-700 transition-colors block text-center"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Ingresar
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Mobile Navigation - REMOVED, now using BottomNav component at bottom */}
     </header>
   );
 }

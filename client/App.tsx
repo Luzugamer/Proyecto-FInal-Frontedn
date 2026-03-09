@@ -13,7 +13,6 @@ import SimpleIndex from "./pages/SimpleIndex";
 import MinimalTest from "./pages/MinimalTest";
 import Calendar from "./pages/Calendar";
 import CalendarCompact from "./pages/CalendarCompact";
-import Matches from "./pages/Matches";
 import TestMatches from "./pages/TestMatches";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetail from "./pages/TournamentDetail";
@@ -41,7 +40,6 @@ const App = () => (
         <Layout>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/partidos" element={<Matches />} />
             <Route path="/test-partidos" element={<TestMatches />} />
             <Route path="/torneos" element={<Tournaments />} />
             <Route path="/torneo/:slug" element={<TournamentDetail />} />
